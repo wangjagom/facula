@@ -1,18 +1,37 @@
-import base64, html, re, subprocess, sys, os
+import base64, html, re, subprocess, sys, os, tempfile
+from pathlib import Path
 from markdown_it import MarkdownIt
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
 
-sys.path.insert(0, os.path.dirname(__file__))
+TOOLS = Path(__file__).resolve().parent
+ROOT = TOOLS.parent
+sys.path.insert(0, str(TOOLS))
+sys.path.insert(0, str(TOOLS / "figures"))
+
+# 사용법: python tools/build.py ui5 | backend | all
+CLI_BOOKS = {"ui5": "ui5", "backend": "be"}
+if __name__ == "__main__":
+    _arg = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if _arg == "all":
+        # 교재마다 별도 프로세스로 빌드(이 파일은 모듈 수준에서 한 교재를 빌드해요)
+        for _b in CLI_BOOKS:
+            subprocess.run([sys.executable, str(Path(__file__).resolve()), _b], check=True)
+        import index_page
+        index_page.build(ROOT)
+        sys.exit(0)
+    if _arg not in CLI_BOOKS:
+        sys.exit("사용법: python tools/build.py [ui5|backend|all]")
+    BOOK = CLI_BOOKS[_arg]
+
 from diagrams import FIGURES
 
-FONT_DIR = "/home/claude/fontpkg/pr/packages/pretendard/dist/public/static"
-BOOK = os.environ.get("BOOK", "ui5")
+FONT_DIR = ROOT / "fonts"
 _EXT_ERD = ("https://wangjagom.github.io/erd-designer/", ("erd", "teal"), "ERD 설계 도구", "ERD")
 BOOKS = {
     "ui5": dict(
-        src="/home/claude/web/doc.md", out="/home/claude/web/index.html",
+        src=ROOT / "content/sap-ui5/doc.md", out=ROOT / "site/sap-ui5/index.html",
         title="SAPUI5 총정리", sub="자바스크립트 기초부터 데이터 바인딩까지",
         part_max=15, term_parts=(2, 16), off=1,
         groups=[("시작하기", [0]), ("자바스크립트 기초", range(1, 7)), ("UI5 개념", range(7, 15)),
@@ -20,23 +39,23 @@ BOOKS = {
         part_icons={**{i: v for i, v in __import__("icon_map2").PART.items() if i <= 15}, 16: ("keyboard", None), 17: ("folder", None)},
         coming={},
         meta="<span>2026년 11월 6일</span><span>수업 프로젝트 0108–0213 · Lev05 기준</span>",
-        extras=[_EXT_ERD, (os.environ.get("BE_URL", "#"), ("db", "slate"), "SAP 백엔드 총정리", "백엔드")],
+        extras=[_EXT_ERD, ("../sap-backend/", ("db", "slate"), "SAP 백엔드 총정리", "백엔드")],
     ),
     "be": dict(
-        src="/home/claude/web/doc_be.md", out="/home/claude/web_be/index.html",
+        src=ROOT / "content/sap-backend/doc.md", out=ROOT / "site/sap-backend/index.html",
         title="SAP 백엔드 총정리", sub="DB 기초부터 SQL, ABAP 데이터까지",
         part_max=6, term_parts=(1, 6), off=0,
         groups=[("시작하기", [0]), ("DB 기초", [1]), ("ABAP Dictionary", [2, 3]), ("SQL과 ABAP", [4, 5]), ("UI5 연결", [6]), ("부록", [7, 8])],
         part_icons={0: ("book", None), 1: ("table", "blue"), 2: ("db", "slate"), 3: ("chain", "indigo"), 4: ("magnifier", "indigo"), 5: ("console", "ink"), 6: ("window", "blue"), 7: ("folder", None), 8: ("book", "teal")},
         meta="<span>2026년 11월 12일</span><span>SAPUI5 총정리와 짝을 이루는 교재</span>",
         coming={},
-        extras=[_EXT_ERD, (os.environ.get("UI5_URL", "#"), ("window", "blue"), "SAPUI5 총정리", "UI5")],
+        extras=[_EXT_ERD, ("../sap-ui5/", ("window", "blue"), "SAPUI5 총정리", "UI5")],
     ),
 }
 CFG = BOOKS[BOOK]
 SRC, OUT = CFG["src"], CFG["out"]
 
-md_src = open(SRC, encoding="utf-8").read()
+md_src = SRC.read_text(encoding="utf-8")
 import re as _re
 
 
@@ -475,7 +494,6 @@ def page_label(i):
 
 
 import sys
-sys.path.insert(0, "/home/claude/build")
 from toss_icons import use as _icon_use, defs_svg as _icon_defs
 from icon_map2 import CONCEPT as _IC_CONCEPT
 _IC_PART = CFG["part_icons"]
@@ -758,19 +776,20 @@ SUB = CFG["sub"]
 all_text = re.sub(r"<[^>]+>", "", html_body) + TITLE + SUB + re.sub(r"<[^>]+>", "", toc_html) + \
     "문제 건너뛰고 내용 보기아래 내용이 열렸어요.모두 맞혔어요!목차이 부분에서시작하기자바스크립트 기초UI5 개념문제 해결↑#복사됨복사 실패맨 위로부가 기능ERD 설계 도구SAPUI5 총정리SAP 백엔드 총정리DB와 SQLABAP개발 도구새 창 2026년 11월 12일SAPUI5 총정리와 짝을 이루는 교재2026년 11월 6일수업 프로젝트 0108–0213 · Lev05 기준부록시작0123456789"
 chars = "".join(sorted(set(html.unescape(all_text)) | set(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~·–—→←✓")))
-open("/home/claude/build/chars.txt", "w", encoding="utf-8").write(chars)
+_TMP = Path(tempfile.mkdtemp(prefix="facula_font_"))
+(_TMP / "chars.txt").write_text(chars, encoding="utf-8")
 faces = []
 for w, name in [(400, "Regular"), (600, "SemiBold"), (700, "Bold")]:
-    out = f"/home/claude/build/p-{w}.woff"
-    subprocess.run(["pyftsubset", f"{FONT_DIR}/Pretendard-{name}.otf",
-                    "--text-file=/home/claude/build/chars.txt", "--flavor=woff",
+    out = str(_TMP / f"p-{w}.woff")
+    subprocess.run([sys.executable, "-m", "fontTools.subset", str(FONT_DIR / f"Pretendard-{name}.otf"),
+                    f"--text-file={_TMP / 'chars.txt'}", "--flavor=woff",
                     "--layout-features=*", f"--output-file={out}"], check=True)
     b64 = base64.b64encode(open(out, "rb").read()).decode()
     faces.append(f"@font-face{{font-family:'Pretendard';font-weight:{w};font-style:normal;font-display:swap;"
                  f"src:url(data:font/woff;base64,{b64}) format('woff');}}")
 
-css = open("/home/claude/build/style.css", encoding="utf-8").read()
-js = open("/home/claude/build/app.js", encoding="utf-8").read()
+css = (TOOLS / "assets" / "style.css").read_text(encoding="utf-8")
+js = (TOOLS / "assets" / "app.js").read_text(encoding="utf-8")
 
 page = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -845,6 +864,7 @@ if BOOK == "be":
 else:
     _peek = _refpeek.assets(_refpeek.UI5, ".concept", None, code_only=True)
 page = page.replace("</body>", _peek + "\n</body>", 1)
-os.makedirs(os.path.dirname(OUT), exist_ok=True)
-open(OUT, "w", encoding="utf-8").write(page)
+OUT.parent.mkdir(parents=True, exist_ok=True)
+OUT.write_text(page, encoding="utf-8", newline="\n")
+import shutil; shutil.rmtree(_TMP, ignore_errors=True)
 print("bytes", len(page.encode()), "sections", len(toc), "h3", h3n)

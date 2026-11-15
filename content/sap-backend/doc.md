@@ -1910,7 +1910,7 @@ START-OF-SELECTION.
 
 **입력칸 이름 바꾸기.** 입력 화면에는 기본으로 `PA_SID` 같은 변수 이름이 보여요. 메뉴 **Goto → Text Elements → Selection Texts**에서 칸마다 "학번" 같은 이름을 적을 수 있어요. **Dictionary Ref.**에 체크하면 Data Element의 Field Label을 그대로 가져와요. 저장하고 활성화해야 반영돼요.
 
-입력받은 값으로 DB 테이블을 읽는 방법은 뒤의 "키로 데이터 읽기"에서 이어서 봐요. 별도 페이지 [SELECT SINGLE 한 줄씩 따라가기](https://claude.ai/artifact/9mUwc99tEhcRoFXFM8RkAs)에서는 입력 화면부터 출력까지 흐름을 그림으로 따라가요.
+입력받은 값으로 DB 테이블을 읽는 방법은 뒤의 "키로 데이터 읽기"에서 이어서 봐요. 별도 페이지 [SELECT SINGLE 한 줄씩 따라가기](../select-single/)에서는 입력 화면부터 출력까지 흐름을 그림으로 따라가요.
 
 <details class="more practice">
 <summary>문제 풀기 — 배운 내용 확인</summary>
@@ -2692,7 +2692,7 @@ START-OF-SELECTION.
 - 입력 화면에서 `0003`을 넣으면 `도윤 78`, 없는 학번을 넣으면 "없는 학번이에요"가 나와요.
 - 요즘 문법에서는 조건의 `pa_sid` 앞에도 `@`를 붙여요. 프로그램 안의 변수라는 표시예요.
 - 이 프로그램에 SE93으로 T-code를 붙이면 사용자는 T-code만 쳐서 쓸 수 있어요.
-- 한 줄씩 어떻게 실행되는지는 [SELECT SINGLE 한 줄씩 따라가기](https://claude.ai/artifact/9mUwc99tEhcRoFXFM8RkAs)에서 그림으로 따라가 보세요.
+- 한 줄씩 어떻게 실행되는지는 [SELECT SINGLE 한 줄씩 따라가기](../select-single/)에서 그림으로 따라가 보세요.
 
 **복합 키는 키 필드를 전부 적어야 1건이 정해져요.** 1부의 수강 테이블 ZENROLL은 `SID` + `SUBJ`가 키예요.
 
