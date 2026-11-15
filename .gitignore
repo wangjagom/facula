@@ -1,0 +1,9 @@
+site/
+__pycache__/
+*.pyc
+*.woff
+chars.txt
+.venv/
+_backup_original/
+.DS_Store
+Thumbs.db
