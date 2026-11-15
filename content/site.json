@@ -1,0 +1,32 @@
+{
+  "title": "Facula",
+  "tagline": "차근차근 따라가는 학습 노트",
+  "intro": "개념을 순서대로, 해요체로 풀어 쓴 학습 노트 모음이에요. 지금은 SAP 교재가 첫 주제예요.",
+  "cards": [
+    {
+      "slug": "sap-ui5",
+      "title": "SAPUI5 총정리",
+      "desc": "자바스크립트 기초부터 데이터 바인딩까지",
+      "tag": "교재"
+    },
+    {
+      "slug": "sap-backend",
+      "title": "SAP 백엔드 총정리",
+      "desc": "DB 기초부터 SQL, ABAP 데이터까지",
+      "tag": "교재"
+    },
+    {
+      "slug": "select-single",
+      "title": "SELECT SINGLE 한 줄씩 따라가기",
+      "desc": "한 줄이 실행되는 과정을 그림으로 따라가 봐요",
+      "tag": "단독 페이지"
+    }
+  ],
+  "links": [
+    {
+      "title": "ERD 설계 도구",
+      "desc": "테이블 관계를 그려 보는 도구 (새 창)",
+      "url": "https://wangjagom.github.io/erd-designer/"
+    }
+  ]
+}
