@@ -6,6 +6,7 @@
 Astro 빌드(npm run build)에는 파이썬이 필요 없어요.
 """
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -49,7 +50,10 @@ def main() -> None:
     write(OUT / "figure-icons.svg", icon3d.ns_defs() + "\n")
 
     # 3) 제목·목차 아이콘: 심볼 정의와 개념 -> 아이콘 표
-    combos = set(icon_map2.CONCEPT.values()) | set(icon_map2.PART.values()) | set(EXTRA_ICONS)
+    # 본문의 {{ic:물체:색}} 확장 아이콘도 모아요
+    inline = {(m.group(1), m.group(2) or None) for doc in ROOT.glob("content/*/doc.md")
+              for m in re.finditer(r"\{\{ic:(\w+):?(\w*)\}\}", doc.read_text(encoding="utf-8"))}
+    combos = set(icon_map2.CONCEPT.values()) | set(icon_map2.PART.values()) | set(EXTRA_ICONS) | inline
     symbols = {f"{o}|{h or ''}|{m}": toss_icons.symbol(o, h, m) for o, h in combos for m in ("D", "E")}
     write(OUT / "icons.json", json.dumps({"gradients": toss_icons.defs(), "symbols": dict(sorted(symbols.items()))},
                                          ensure_ascii=False, indent=1) + "\n")

@@ -1,0 +1,87 @@
+# 교재 설정 (tools/build.py의 BOOKS["ui5"], _ALIASES, TERMS에서 옮겨 왔어요)
+title: SAPUI5 총정리
+sub: 자바스크립트 기초부터 데이터 바인딩까지
+kicker: SAP CODE 스터디 자료
+meta:
+  - 2026년 11월 6일
+  - 수업 프로젝트 0108–0213 · Lev05 기준
+partMax: 15
+termParts: [2, 16]
+off: 1
+groups:
+  - { name: 시작하기, parts: [0] }
+  - { name: 자바스크립트 기초, parts: [1, 2, 3, 4, 5, 6] }
+  - { name: UI5 개념, parts: [7, 8, 9, 10, 11, 12, 13, 14] }
+  - { name: 문제 해결, parts: [15] }
+  - { name: 개발 도구, parts: [16] }
+  - { name: 부록, parts: [17] }
+partIcons:
+  0: [book, null]
+  1: [play, green]
+  2: [cabinet, null]
+  3: [traffic, null]
+  4: [gear, blue]
+  5: [rocket, null]
+  6: [stopwatch, null]
+  7: [house, null]
+  8: [palette, null]
+  9: [chain, indigo]
+  10: [array, null]
+  11: [pin, blue]
+  12: [steps, null]
+  13: [qblock, null]
+  14: [puzzle, null]
+  15: [bug, null]
+  16: [keyboard, null]
+  17: [folder, null]
+extras:
+  - { url: "https://wangjagom.github.io/erd-designer/", icon: [erd, teal], label: ERD 설계 도구 }
+  - { url: "../sap-backend/", icon: [db, slate], label: SAP 백엔드 총정리 }
+# "3부 함수"처럼 쓴 글이 개념 "함수 기본"을 가리키게 하는 별칭
+aliases:
+  함수 기본: [함수]
+  async / await: [async/await, async]
+  Dialog 팝업: [Dialog]
+  id와 byId: [byId]
+  컨트롤러 파일 읽기: [컨트롤러 파일]
+  바인딩 전: [바인딩]
+  프로젝트 폴더 구조: [폴더 구조]
+  기본 모델과 이름 있는 모델: [이름 있는 모델, 기본 모델]
+  XML View 읽는 법: [XML View]
+  정렬과 간격: [정렬 설정]
+  배열 vs 객체: [배열과 객체의 차이]
+# 앞에서 배운 개념으로 가는 용어 자동 링크: [용어, 부 번호, 개념 제목]
+terms:
+  - [변수, 1, 변수]
+  - [자료형, 1, 자료형]
+  - [문자열, 1, 문자열]
+  - [형 변환, 1, 형 변환]
+  - [객체, 1, 객체]
+  - [배열, 1, 배열]
+  - [JSON, 1, JSON]
+  - [반복문, 2, 반복문]
+  - [삼항 연산자, 2, 삼항 연산자]
+  - [함수, 3, 함수]
+  - [콜백 함수, 3, 콜백 함수]
+  - [콜백, 3, 콜백 함수]
+  - [화살표 함수, 3, 화살표 함수]
+  - [배열 메서드, 3, 배열 메서드]
+  - [메서드, 4, 메서드]
+  - [메서드 체이닝, 4, 메서드 체이닝]
+  - [스코프, 4, 스코프]
+  - [Promise, 5, Promise]
+  - [async / await, 5, async / await]
+  - [async/await, 5, async / await]
+  - [이벤트 객체, 6, 이벤트 객체]
+  - [헝가리안 표기, 6, 변수 이름 규칙]
+  - [Fragment, 7, Fragment]
+  - [Dialog, 7, Dialog 팝업]
+  - [여백 클래스, 7, 여백 클래스]
+  - [바인딩, 8, 바인딩]
+  - [이름 있는 모델, 8, 이름 있는 모델]
+  - [바인딩 컨텍스트, 9, 바인딩 컨텍스트]
+  - [포매터, 11, 포매터]
+  - [Expression Binding, 12, Expression Binding]
+# 7부(part-8)는 `End`, `Center` 같은 UI5 값을 써서 키캡으로 바꾸지 않아요
+keycapSkip: [part-8]
+refpeek: sap-ui5
