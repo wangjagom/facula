@@ -1,0 +1,35 @@
+# 교재 설정 (tools/build.py의 BOOKS["be"]에서 옮겨 왔어요)
+title: SAP 백엔드 총정리
+sub: DB 기초부터 SQL, ABAP 데이터까지
+kicker: SAP CODE 스터디 자료
+meta:
+  - 2026년 11월 12일
+  - SAPUI5 총정리와 짝을 이루는 교재
+partMax: 6
+termParts: [1, 6]
+off: 0
+groups:
+  - { name: 시작하기, parts: [0] }
+  - { name: DB 기초, parts: [1] }
+  - { name: ABAP Dictionary, parts: [2, 3] }
+  - { name: SQL과 ABAP, parts: [4, 5] }
+  - { name: UI5 연결, parts: [6] }
+  - { name: 부록, parts: [7, 8] }
+partIcons:
+  0: [book, null]
+  1: [table, blue]
+  2: [db, slate]
+  3: [chain, indigo]
+  4: [magnifier, indigo]
+  5: [console, ink]
+  6: [window, blue]
+  7: [folder, null]
+  8: [book, teal]
+extras:
+  - { url: "https://wangjagom.github.io/erd-designer/", icon: [erd, teal], label: ERD 설계 도구 }
+  - { url: "../sap-ui5/", icon: [window, blue], label: SAPUI5 총정리 }
+# UI5 교재에서 쓰는 별칭·용어 자동 링크·키캡 예외. 백엔드는 없어요.
+aliases: {}
+terms: []
+keycapSkip: []
+refpeek: sap-backend

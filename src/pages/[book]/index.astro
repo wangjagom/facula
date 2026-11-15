@@ -1,0 +1,12 @@
+---
+import { getCollection } from 'astro:content';
+import BookLayout from '../../layouts/BookLayout.astro';
+import type { BookModel } from '../../lib/book/types';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books');
+  return books.map((b) => ({ params: { book: b.id }, props: { book: b.data as unknown as BookModel } }));
+}
+const { book } = Astro.props;
+---
+<BookLayout book={book} />
