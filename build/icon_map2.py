@@ -1,0 +1,105 @@
+# concept title head -> (object, hue or None);  part index -> (object, hue or None)
+CONCEPT = {
+ "자바스크립트는 어떤 언어인가요?": ("laptop", "blue"), "콘솔 열기": ("console", None), "라이브러리와 프레임워크": ("toolbox", None),
+ "자주 보는 에러 세 가지": ("bug", None),
+ "변수": ("tag", "blue"), "자료형": ("blocks", None), "문자열": ("bubble", None), "비교는 항상 ===": ("same", None),
+ "형 변환": ("swap", None), "객체": ("box", None), "배열": ("array", None), "배열 안의 객체, 객체 안의 배열": ("layers", None),
+ "변수 이름 앞의 글자": ("tag", "amber"), "JSON": ("doc", None),
+ "if": ("sign", None), "거짓으로 보는 값": ("no", None), "삼항 연산자": ("qblock", None), "반복문": ("loop", None), "예제": ("clipboard", None),
+ "함수 기본": ("vend", None), "일찍 끝내기(return)": ("door", None), "콜백 함수": ("phone", None), "화살표 함수": ("arrow", None),
+ "배열 메서드": ("conveyor", None), "배열 vs 객체": ("scale", None),
+ "메서드": ("wrench", None), "this": ("target", None), "스코프": ("nested", None), "메서드 체이닝": ("chain", None),
+ "기다리지 않으면 생기는 일": ("alarm", None), "Promise": ("buzzer", None), "then": ("bell", None), "async / await": ("hourglass", None),
+ "프로젝트 폴더 구조": ("folder", None), "앱 id와 이름 규칙": ("folders", None), "XML View 읽는 법": ("window", None),
+ "id와 byId": ("key", None), "컨트롤러 파일 읽기": ("gear", None), "컨트롤러 안의 this": ("target", "violet"),
+ "press": ("button", None), "이벤트 객체": ("envelope", None), "길게 이어진 메서드 읽기": ("chain", "green"),
+ "변수 이름 규칙 (헝가리안 표기)": ("tag", "orange"),
+ "레이아웃 컨트롤": ("layout", None), "정렬과 간격": ("layers", "teal"), "여백 클래스": ("box", "orange"), "Fragment": ("puzzle", None), "Dialog 팝업": ("dialog", None),
+ "바인딩 전(0108)과 후(0203) 비교": ("plug", None), "Binding Path는 자바스크립트 경로와 같아요": ("pin", None),
+ "모델 만들고 연결하기": ("db", "indigo"), "기본 모델과 이름 있는 모델": ("db", "teal"), "모델의 종류": ("db", "violet"),
+ "값 읽고 바꾸기": ("pencil", None), "TwoWay Binding": ("swap", None), "객체 키로 바로 찾기": ("key", "green"),
+ "파일 경로 주의": ("warn", None),
+ "템플릿과 상대경로": ("stamp", None), "바인딩 컨텍스트": ("pin", "violet"), "콤보박스에서 값 꺼내기": ("dropdown", None),
+ "복사해서 보여주기": ("copy", "blue"),
+ "이름의 뜻": ("box", "blue"), "기본 모양": ("window", "teal"), "목록 → 상세": ("masterdetail", None),
+ "팝업에도 똑같이": ("dialog", "violet"), "키로 경로 만들기": ("key", "orange"), "엘리먼트 안의 목록": ("folders", "teal"),
+ "이름 있는 모델과 bindElement": ("db", "orange"), "정리": ("check", None),
+ "테이블 구조": ("table", None), "필터": ("funnel", None), "정렬": ("sort", None), "포매터": ("wand", None),
+ "많은 데이터 나눠 보여주기": ("pages", None),
+ "Expression Binding": ("calculator", None), "데이터 타입": ("coin", None),
+ "단계별로 기억할 점": ("steps", None), "화면 배치 팁": ("bulb", None),
+ "막혔을 때 순서": ("magnifier", "red"),
+ "ABAP과 자바스크립트 대응표": ("swap", None), "변수 이름 규칙": ("tag", "teal"), "자주 만나는 백엔드 데이터 규칙": ("server", None),
+ "백엔드 데이터를 받으면 확인할 것": ("clipboard", "teal"),
+ "컨트롤 프로퍼티 사전": ("wrench", "blue"), "확인 문제": ("check", "green"), "작은 앱 한 개 완성하기": ("puzzle", "green"), "용어 사전": ("book", None), "약어 풀이": ("note", None), "더 공부할 곳": ("rocket", None), "Easy ABAP 2.0": ("book", "teal"),
+}
+PART = {0: ("book", None), 1: ("play", "green"), 2: ("cabinet", None), 3: ("traffic", None), 4: ("gear", "blue"),
+        5: ("rocket", None), 6: ("stopwatch", None), 7: ("house", None), 8: ("palette", None), 9: ("chain", "indigo"),
+        10: ("array", None), 11: ("pin", "blue"), 12: ("steps", None), 13: ("qblock", None), 14: ("puzzle", None),
+        15: ("bug", None), 16: ("table", "blue"), 17: ("magnifier", "indigo"), 18: ("db", "slate"), 19: ("keyboard", None), 20: ("folder", None)}
+
+CONCEPT.update({
+    "BAS 처음 열기": ("door", None),
+    "화면 읽기": ("layout", None),
+    "컴퓨터 기본 단축키": ("clipboard", None),
+    "Command Palette와 파일 열기": ("magnifier", None),
+    "코드 편집 단축키": ("pencil", None),
+    "화면과 터미널 다루기": ("console", None),
+    "브라우저 안의 BAS": ("warn", None),
+    "추천 Extension": ("plug", "green"),
+    "설정 꿀팁": ("gear", "slate"),
+})
+
+CONCEPT.update({
+    "데이터베이스와 테이블": ("db", "blue"),
+    "키(Key)": ("key", None),
+    "테이블을 나누는 이유": ("cabinet", None),
+    "외래키와 조인": ("chain", None),
+    "SQL": ("magnifier", None),
+    "데이터 바꾸기": ("pencil", None),
+    "모아서 계산하기": ("calculator", None),
+    "SAP 테이블 읽는 법": ("table", "blue"),
+    "ABAP Dictionary": ("book", None),
+    "ABAP Dictionary 깊게 보기": ("book", "blue"),
+    "Value Table → Check Table → Check Field": ("chain", "indigo"),
+    "SE11에서 외래키 걸기": ("wrench", None),
+    "정규화": ("layers", "blue"),
+    "저장할 곳 정하기": ("folder", None),
+    "Currency/Quantity Fields": ("coin", "amber"),
+    "Structure, Table Type, Include, Append": ("box", None),
+    "외래키 설정 자세히": ("chain", "indigo"),
+    "Text Table 만들기": ("doc", "slate"),
+    "Input Help/Check 탭과 Search Help": ("magnifier", None),
+    "Table Maintenance Generator와 SM30": ("table", "teal"),
+    "ABAP Dictionary": ("book", "blue"),
+    "여러 테이블의 관계와 제약 조건 분석하기": ("layers", "indigo"),
+    "SE11에서 만드는 순서": ("layers", None),
+    "SE16에서 데이터 넣어 보고 Check Table 확인하기": ("check", "green"),
+    "개발 화면": ("window", None),
+    "ABAP 문장의 모양": ("console", None),
+    "변수와 타입": ("box", None),
+    "Structure와 Internal Table 만들기": ("array", None),
+    "키로 데이터 읽기": ("key", None),
+    "조건문": ("sign", None),
+    "TYPES와 테이블 종류": ("blocks", None),
+    "Internal Table 바꾸기": ("pencil", None),
+    "정렬과 중복 지우기": ("sort", None),
+    "LOOP 자세히": ("loop", None),
+    "줄 꺼내기와 값 만들기": ("wand", None),
+    "DB 테이블 바꾸기": ("db", "orange"),
+    "옛 문법과 요즘 문법 한눈에 보기": ("swap", None),
+    "Internal Table": ("array", None),
+    "더 알아둘 개념": ("bulb", None),
+})
+
+CONCEPT.update({"테이블 사이의 관계": ("puzzle", None)})
+
+CONCEPT.update({"프론트엔드와 백엔드": ("plug", None)})
+
+CONCEPT.update({"JOIN": ("chain", None), "SQL 결과를 ABAP에서 받기": ("array", None)})
+
+CONCEPT.update({"ERD 그리기": ("pencil", "blue")})
+
+CONCEPT.update({"SAP GUI 첫 화면": ("window", "blue"), "만든 뒤에 고칠 때": ("wrench", "amber"),
+                "외래키를 쓸 때 주의할 점": ("warn", None), "입력 받기": ("dropdown", None),
+                "내 프로그램에 T-code 붙이기": ("tag", "teal")})

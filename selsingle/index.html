@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SELECT SINGLE 한 줄씩 따라가기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#111827;--ink2:#374151;--muted:#6b7280;--line:rgb(3 7 18 / .08);--line2:rgb(3 7 18 / .14);
+--accent:#0ea5e9;--accent-ink:#0369a1;--soft:#e0f2fe;--amber:#f59e0b;--amber-ink:#92400e;--amber-soft:#fef3c7;
+--violet:#8b5cf6;--violet-soft:#ede9fe;--green:#15803d;--green-soft:#dcfce7;--red:#dc2626;
+--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+--body:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--body);color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;line-height:1.7}
+header{max-width:1180px;margin:0 auto;padding:52px 24px 4px}
+header h1{font-size:28px;letter-spacing:-.02em;margin:0 0 10px;line-height:1.35}
+header p{margin:0;color:var(--muted);font-size:15.5px;max-width:720px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 45vh;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:36px}
+.stage{position:sticky;top:0;height:100vh;display:flex;align-items:center}
+.panel{width:100%;display:grid;gap:10px}
+.steps{padding-top:32vh}
+.step{min-height:80vh}
+.card{padding:18px 20px;border-radius:16px;background:#fff;box-shadow:0 0 0 1px var(--line2);opacity:.35;transition:opacity .3s,box-shadow .3s}
+.step.on .card{opacity:1;box-shadow:0 0 0 2px var(--accent),0 10px 28px -12px rgb(14 165 233 / .45)}
+.card .n{display:inline-grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;margin-right:8px}
+.card h2{display:flex;align-items:center;font-size:17px;margin:0 0 8px;letter-spacing:-.01em;line-height:1.4}
+.card p{margin:6px 0;font-size:15px;color:var(--ink2)}
+.card code{font-family:var(--mono);font-size:.9em;padding:1px 6px;border-radius:6px;background:#f3f4f6}
+.card ul,.card ol{margin:6px 0;padding-left:20px;font-size:14.5px;color:var(--ink2)}
+.say{display:block;margin:8px 0;padding:10px 12px;border-radius:10px;background:#f8fafc;box-shadow:inset 0 0 0 1px var(--line);font-size:15px;line-height:1.9}
+.say b{padding:1px 5px;border-radius:5px;font-weight:600}
+.c-from{background:var(--soft);color:var(--accent-ink)}.c-where{background:var(--amber-soft);color:var(--amber-ink)}
+.c-sel{background:var(--violet-soft);color:#5b21b6}.c-into{background:var(--green-soft);color:#166534}
+
+/* flow strip */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px;position:relative}
+.node{position:relative;padding:7px 8px;border-radius:11px;background:#fff;box-shadow:0 0 0 1px var(--line2);text-align:center;font-size:11.5px;line-height:1.35;color:var(--muted);transition:all .3s}
+.node b{display:block;font-size:12px;color:var(--ink2)}
+.node .ic{font-size:16px;display:block;line-height:1.2}
+.node.on{box-shadow:0 0 0 2px var(--accent);background:var(--soft);color:var(--accent-ink)}
+.node.on b{color:var(--accent-ink)}
+.node:not(:last-child)::after{content:"";position:absolute;right:-19px;top:50%;width:16px;height:2px;background:#cbd5e1}
+.node:not(:last-child)::before{content:"";position:absolute;right:-20px;top:calc(50% - 4px);border:5px solid transparent;border-left-color:#cbd5e1;border-right:0}
+.node.go::after{background:var(--accent)}.node.go::before{border-left-color:var(--accent)}
+
+/* code */
+.code{border-radius:14px;background:#0f172a;color:#e2e8f0;font:12.5px/1.68 var(--mono);padding:10px 4px;box-shadow:0 10px 30px -14px rgb(15 23 42 / .5);position:relative}
+.ln{display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:7px;transition:background .3s,opacity .3s;white-space:pre}
+.ln .ord{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font:700 10.5px var(--body);color:#0f172a;opacity:0;transform:scale(.6);transition:all .3s;flex:none;margin-left:auto}
+.show-ord .ln .ord{opacity:1;transform:none}
+.ln[data-l=from] .ord{background:#7dd3fc}.ln[data-l=where] .ord{background:#fcd34d}.ln[data-l=sel] .ord{background:#c4b5fd}.ln[data-l=into] .ord{background:#86efac}
+.k{color:#c4b5fd}.f{color:#7dd3fc}.t{color:#fde68a}.v{color:#86efac}.s{color:#fca5a5}.cm{color:#64748b;font-style:italic}
+.code.dim .ln:not(.hi){opacity:.35}
+.ln.hi{background:rgb(255 255 255 / .1)}
+.ln[data-l=from].hi{background:rgb(14 165 233 / .28)}.ln[data-l=where].hi{background:rgb(245 158 11 / .3)}
+.ln[data-l=sel].hi{background:rgb(139 92 246 / .32)}.ln[data-l=into].hi{background:rgb(34 197 94 / .28)}
+.newsyn{display:none}
+.mode-new .oldsyn{display:none}.mode-new .newsyn{display:block}
+.pill{display:inline-block;padding:0 6px;border-radius:5px;background:var(--amber);color:#111;font-weight:700;opacity:0;transition:opacity .3s}
+.show-val .pill{opacity:1}
+
+/* middle row */
+.row{display:grid;grid-template-columns:.9fr 1.25fr .55fr 1fr;gap:8px}
+.box{border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line2);padding:8px 10px;transition:box-shadow .3s,opacity .3s}
+.box h3{margin:0 0 6px;font-size:11px;font-weight:700;color:var(--muted)}
+.box.hi{box-shadow:0 0 0 2px var(--accent),0 6px 18px -8px rgb(14 165 233 / .45)}
+.box.hi-g{box-shadow:0 0 0 2px #22c55e,0 6px 18px -8px rgb(34 197 94 / .45)}
+.inp{display:flex;align-items:center;gap:6px;font:11.5px var(--mono)}
+.inp+.inp{margin-top:4px}
+.inp b{font-weight:600;color:var(--ink2);min-width:44px}
+.slot{flex:1;min-width:0;height:26px;display:flex;align-items:center;padding:0 7px;border-radius:7px;background:#f9fafb;box-shadow:inset 0 0 0 1px var(--line2);font:600 11.5px var(--mono);white-space:nowrap;overflow:hidden;transition:background .3s,box-shadow .3s}
+.slot.filled{background:var(--green-soft);box-shadow:inset 0 0 0 1.5px #22c55e}
+.slot.inp-on{background:var(--amber-soft);box-shadow:inset 0 0 0 1.5px var(--amber)}
+.rc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.rc .num{font:700 24px var(--mono);color:#cbd5e1;transition:color .3s}
+.rc.ok .num{color:var(--green)}.rc.bad .num{color:var(--red)}
+.rc small{font-size:10.5px;color:var(--muted);line-height:1.3}
+.out .screen{height:62px;border-radius:7px;background:#f8fafc;box-shadow:inset 0 0 0 1px var(--line2);padding:6px 8px;font:12px/1.5 var(--mono);color:var(--ink2)}
+.out .screen .line{opacity:0;transform:translateY(4px);transition:all .4s}
+.out.shown .screen .line{opacity:1;transform:none}
+.out .empty{color:var(--muted);font-size:11px}
+
+/* table */
+.tbl{border-radius:14px;box-shadow:0 0 0 1px var(--line2);overflow:hidden;background:#fff;transition:box-shadow .3s}
+.tbl.hi{box-shadow:0 0 0 2px var(--accent),0 10px 24px -12px rgb(14 165 233 / .45)}
+.tbl .cap{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:#f8fafc;border-bottom:1px solid var(--line);font:700 12px var(--mono)}
+.tbl .cap span{font:500 11px var(--body);color:var(--muted)}
+table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+th,td{padding:5px 10px;text-align:left;border-bottom:1px solid var(--line);transition:background .35s,color .35s,opacity .35s}
+th{font-size:11px;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+th.key::before{content:"🔑";font-size:9px;margin-right:3px}
+.mandt{color:#94a3b8}
+.tbl.rows-on tr.keep td{background:var(--amber-soft)}
+.tbl.rows-on tr.drop td{opacity:.22}
+.tbl.cols-on [data-c].pick{background:var(--violet-soft);color:#5b21b6;font-weight:700}
+.tbl.cols-on td.nopick,.tbl.cols-on th.nopick{opacity:.22}
+.tbl.rows-on.cols-on tr.keep td.pick{background:#ddd6fe}
+.res{display:flex;align-items:center;gap:8px;font:12px var(--mono);min-height:30px;opacity:0;transition:opacity .3s}
+.res.on{opacity:1}
+.res b{font:700 11px var(--body);color:var(--muted)}
+.res .cell{padding:3px 9px;border-radius:7px;background:var(--violet-soft);color:#5b21b6;font-weight:700}
+.res .none{color:var(--red);font:600 12px var(--body)}
+
+.chip{position:fixed;z-index:30;padding:3px 8px;border-radius:7px;color:#111;font:700 12px var(--mono);pointer-events:none;box-shadow:0 6px 16px -6px rgb(0 0 0 / .35);transition:transform .85s cubic-bezier(.3,.7,.2,1),opacity .3s}
+footer{max-width:1180px;margin:0 auto;padding:0 24px 80px;color:var(--muted);font-size:13.5px}
+
+@media (max-width:960px){
+  .wrap{grid-template-columns:1fr;gap:0;padding-bottom:30vh}
+  .stage{height:auto;z-index:5;background:linear-gradient(#fff 94%,rgb(255 255 255 / 0));padding:6px 0 10px}
+  .panel{gap:6px}
+  .flow{gap:10px}.node{padding:4px 2px;font-size:0}.node b{font-size:9.5px}.node .ic{font-size:13px}
+  .node:not(:last-child)::after{right:-9px;width:8px}.node:not(:last-child)::before{right:-10px;border-width:4px}
+  .code{font-size:9.6px;line-height:1.55;padding:6px 2px}.ln{padding:0 8px}.ln .ord{width:14px;height:14px;font-size:8.5px}
+  .row{grid-template-columns:1fr 1.3fr .6fr;}.out{grid-column:1 / -1}.out .screen{height:auto;min-height:28px}
+  .box{padding:5px 7px}.box h3{font-size:9.5px;margin-bottom:3px}.inp{font-size:9.5px}.inp b{min-width:34px}.slot{height:21px;font-size:9.5px}
+  .rc .num{font-size:17px}
+  table{font-size:9.6px}th,td{padding:3px 6px}.tbl .cap{padding:3px 8px;font-size:10px}
+  .res{min-height:22px;font-size:10px}
+  .steps{padding-top:4vh}.step{min-height:90vh}
+  header{padding-top:30px}header h1{font-size:23px}
+}
+body{overflow-x:hidden}.panel,.panel>*{min-width:0}
+@media (max-width:960px){
+  .fld,.mh,.stk{display:none!important}
+  .code{font-size:9px;overflow:hidden}.ln{gap:4px}
+  .out:not(.shown){display:none}
+  .flow{gap:8px}.node b{font-size:9px}
+}
+@media (prefers-reduced-motion:reduce){.chip{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>SELECT SINGLE 한 줄씩 따라가기</h1>
+  <p>"상품 번호를 넣으면 상품 이름과 가격을 보여 주는 조회 프로그램"을 만들어 보면서, <b>SELECT부터 WHERE까지</b>가 실제로 어떤 순서로 움직이는지 따라가요. 스크롤하면 위의 흐름 그림, 코드, 테이블이 함께 바뀌어요.</p>
+</header>
+
+<div class="wrap" id="root" data-step="0">
+  <div class="stage">
+    <div class="panel" id="panel">
+      <div class="flow" id="flow">
+        <div class="node" data-n="0"><span class="ic">🧑‍💼</span><b>입력 화면</b></div>
+        <div class="node" data-n="1"><span class="ic">⚙️</span><b>ABAP 프로그램</b></div>
+        <div class="node" data-n="2"><span class="ic">🗄️</span><b>DB 테이블</b></div>
+        <div class="node" data-n="3"><span class="ic">📦</span><b>gs_edu<span class="mh"> (메모리)</span></b></div>
+        <div class="node" data-n="4"><span class="ic">🖥️</span><b>출력 화면</b></div>
+      </div>
+
+      <div class="code" id="code">
+<span class="ln" data-l="p"><span class="k">PARAMETERS</span> <span class="v">pa_objid</span> <span class="k">TYPE</span> ztc0503-objid.</span>
+<span class="ln" data-l="d"><span class="k">DATA</span>: <span class="k">BEGIN OF</span> <span class="v">gs_edu</span>,</span>
+<span class="ln fld" data-l="d">        objtx <span class="k">TYPE</span> ztc0503-objtx,</span>
+<span class="ln fld" data-l="d">        price <span class="k">TYPE</span> ztc0503-price,</span>
+<span class="ln fld" data-l="d">        waers <span class="k">TYPE</span> ztc0503-waers,</span>
+<span class="ln" data-l="d">      <span class="k">END OF</span> <span class="v">gs_edu</span>.</span>
+<span class="ln" data-l="s"><span class="k">START-OF-SELECTION</span>.</span>
+<span class="oldsyn">
+<span class="ln" data-l="sel">  <span class="k">SELECT SINGLE</span> <span class="f">objtx</span> <span class="f">price</span> <span class="f">waers</span><span class="ord">3</span></span>
+<span class="ln" data-l="from">    <span class="k">FROM</span> <span class="t">ztc0503</span><span class="ord">1</span></span>
+<span class="ln" data-l="into">    <span class="k">INTO</span> ( <span class="v">gs_edu-objtx</span>, <span class="v">gs_edu-price</span>, <span class="v">gs_edu-waers</span> )<span class="ord">4</span></span>
+<span class="ln" data-l="where">    <span class="k">WHERE</span> <span class="f">objid</span> = <span class="v">pa_objid</span>. <span class="pill" id="pill">'A002'</span><span class="ord">2</span></span>
+</span>
+<span class="newsyn">
+<span class="ln" data-l="sel">  <span class="k">SELECT SINGLE</span> <span class="f">objtx</span>, <span class="f">price</span>, <span class="f">waers</span><span class="ord">3</span></span>
+<span class="ln" data-l="from">    <span class="k">FROM</span> <span class="t">ztc0503</span><span class="ord">1</span></span>
+<span class="ln" data-l="where">    <span class="k">WHERE</span> <span class="f">objid</span> = @<span class="v">pa_objid</span><span class="ord">2</span></span>
+<span class="ln" data-l="into">    <span class="k">INTO</span> @<span class="v">gs_edu</span>.  <span class="cm">" 순서대로 세 칸에</span><span class="ord">4</span></span>
+</span>
+<span class="ln" data-l="if">  <span class="k">IF</span> sy-subrc = 0.</span>
+<span class="ln" data-l="if">    <span class="k">WRITE</span>: / <span class="v">gs_edu-objtx</span>, <span class="v">gs_edu-price</span>, <span class="v">gs_edu-waers</span>.</span>
+<span class="ln" data-l="if">  <span class="k">ENDIF</span>.</span>
+      </div>
+
+      <div class="row">
+        <div class="box" id="selbox"><h3>① 입력 화면 (1000)</h3>
+          <div class="inp"><b>상품 번호</b><span class="slot" id="pa"></span></div></div>
+        <div class="box" id="varbox"><h3>④ gs_edu (Structure)</h3>
+          <div class="inp"><b>-objtx</b><span class="slot" id="v1"></span></div>
+          <div class="inp"><b>-price</b><span class="slot" id="v2"></span></div>
+          <div class="inp"><b>-waers</b><span class="slot" id="v3"></span></div></div>
+        <div class="box rc" id="rcbox"><h3>sy-subrc</h3><div class="num" id="rc">-</div><small id="rcs">실행 전</small></div>
+        <div class="box out" id="outbox"><h3>⑤ 출력 화면</h3>
+          <div class="screen" id="screen"><span class="empty" id="outEmpty">아직 아무것도 없어요</span><div class="line" id="outLine">모니터&nbsp;&nbsp;320,000&nbsp;&nbsp;KRW</div></div></div>
+      </div>
+
+      <div class="tbl" id="tbl">
+        <div class="cap">ZTC0503 <span>DB 테이블 · 상품</span></div>
+        <table>
+          <thead><tr><th class="key mandt" data-c="mandt">MANDT</th><th class="key" data-c="objid">OBJID</th><th data-c="objtx">OBJTX</th><th data-c="price">PRICE</th><th data-c="waers">WAERS</th><th data-c="stock" class="stk">STOCK</th></tr></thead>
+          <tbody>
+            <tr data-id="A001"><td class="mandt" data-c="mandt">100</td><td data-c="objid">A001</td><td data-c="objtx">키보드</td><td data-c="price">45000</td><td data-c="waers">KRW</td><td data-c="stock" class="stk">12</td></tr>
+            <tr data-id="A002"><td class="mandt" data-c="mandt">100</td><td data-c="objid">A002</td><td data-c="objtx">모니터</td><td data-c="price">320000</td><td data-c="waers">KRW</td><td data-c="stock" class="stk">5</td></tr>
+            <tr data-id="A003"><td class="mandt" data-c="mandt">100</td><td data-c="objid">A003</td><td data-c="objtx">마우스</td><td data-c="price">25000</td><td data-c="waers">KRW</td><td data-c="stock" class="stk">40</td></tr>
+            <tr data-id="A004"><td class="mandt" data-c="mandt">100</td><td data-c="objid">A004</td><td data-c="objtx">노트북</td><td data-c="price">1500000</td><td data-c="waers">KRW</td><td data-c="stock" class="stk">3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="res" id="res"><b>③ 결과 1줄</b><span id="resCells"><span class="cell" data-r="objtx">모니터</span> <span class="cell" data-r="price">320000</span> <span class="cell" data-r="waers">KRW</span></span><span class="none" id="resNone" hidden>찾은 줄이 없어요 (0건)</span></div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <section class="step" data-s="0"><div class="card"><h2><span class="n">1</span>무엇을 만드나요</h2>
+      <p>매장 직원이 <b>상품 번호</b>를 넣고 실행하면, 그 상품의 <b>이름·가격·통화</b>를 보여 주는 조회 프로그램이에요.</p>
+      <p>위 흐름 그림처럼 값이 <b>입력 화면 → 프로그램 → DB 테이블 → gs_edu → 출력 화면</b>으로 이동해요. 이 중 DB에서 꺼내 gs_edu에 담는 부분이 <code>SELECT ... WHERE</code> 한 문장이에요.</p></div></section>
+
+    <section class="step" data-s="1"><div class="card"><h2><span class="n">2</span>직원이 상품 번호를 넣어요</h2>
+      <p><code>PARAMETERS pa_objid</code>가 입력 화면(Selection Screen 1000)에 칸을 만들어요. 직원이 <code>A002</code>를 넣고 실행(F8)을 누르면 값이 <code>pa_objid</code>에 들어가요.</p>
+      <p>그다음 <code>START-OF-SELECTION</code> 아래 코드가 위에서부터 실행돼요. <code>gs_edu</code>의 세 칸은 아직 비어 있어요.</p></div></section>
+
+    <section class="step" data-s="2"><div class="card"><h2><span class="n">3</span>SELECT 문을 우리말로 읽어 보면</h2>
+      <p>네 줄을 한 문장으로 읽으면 이래요.</p>
+      <span class="say"><b class="c-from">ZTC0503 테이블에서</b> <b class="c-where">OBJID가 입력값(A002)인 줄 하나를 찾아</b>, 그 줄의 <b class="c-sel">OBJTX·PRICE·WAERS</b>를 <b class="c-into">gs_edu의 세 칸에 차례로 넣어 줘.</b></span>
+      <p>색깔이 코드의 줄과 같아요. <b>FROM</b>은 어디서, <b>WHERE</b>는 어떤 줄, <b>SELECT</b>는 어떤 칸, <b>INTO</b>는 어디에 담을지예요.</p></div></section>
+
+    <section class="step" data-s="3"><div class="card"><h2><span class="n">4</span>쓰는 순서와 실행 순서가 달라요</h2>
+      <p>코드는 <b>SELECT → FROM → INTO → WHERE</b> 순서로 쓰지만, DB는 이렇게 처리해요.</p>
+      <ol><li><b>FROM</b>: 어느 테이블인지 정해요</li><li><b>WHERE</b>: 조건에 맞는 줄만 남겨요</li><li><b>SELECT</b>: 남은 줄에서 필요한 칸만 골라요</li><li><b>INTO</b>: 고른 값을 변수에 담아요</li></ol>
+      <p>코드 오른쪽 동그라미 숫자가 실행 순서예요. 이제 이 순서대로 따라가 볼게요.</p></div></section>
+
+    <section class="step" data-s="4"><div class="card"><h2><span class="n">5</span>① FROM ztc0503: 테이블을 정해요</h2>
+      <p>프로그램이 DB에 "ZTC0503 테이블을 볼게요"라고 요청해요. 지금은 테이블 전체가 후보예요.</p>
+      <p>맨 앞 <code>MANDT</code>는 적지 않아도 로그인한 Client(100)의 줄만 봐요.</p></div></section>
+
+    <section class="step" data-s="5"><div class="card"><h2><span class="n">6</span>② WHERE objid = pa_objid: 줄을 골라요</h2>
+      <p><code>pa_objid</code> 자리에 입력값 <code>'A002'</code>가 들어가요. 그래서 <b>OBJID가 A002인 줄</b>만 남고 나머지는 빠져요.</p>
+      <p>OBJID는 키라서 같은 값이 두 줄일 수 없어요. 키로 찾았으니 결과는 많아야 1건이고, 그래서 <code>SINGLE</code>과 잘 맞아요.</p></div></section>
+
+    <section class="step" data-s="6"><div class="card"><h2><span class="n">7</span>③ SELECT objtx price waers: 칸을 골라요</h2>
+      <p>남은 한 줄에서 <b>OBJTX, PRICE, WAERS 세 칸만</b> 꺼내요. OBJID, STOCK 같은 다른 칸은 가져오지 않아요.</p>
+      <p>이렇게 해서 "모니터, 320000, KRW" <b>결과 1줄</b>이 만들어져요. 금액(PRICE)은 통화(WAERS)와 함께 있어야 뜻이 정해져서 같이 가져와요.</p></div></section>
+
+    <section class="step" data-s="7"><div class="card"><h2><span class="n">8</span>④ INTO: gs_edu에 담아요</h2>
+      <p>결과 1줄의 값이 프로그램으로 돌아와서, 괄호 안에 적은 <b>순서대로</b> 들어가요.</p>
+      <ul><li>1번째 <code>objtx</code> → <code>gs_edu-objtx</code></li><li>2번째 <code>price</code> → <code>gs_edu-price</code></li><li>3번째 <code>waers</code> → <code>gs_edu-waers</code></li></ul>
+      <p>이름이 아니라 <b>순서</b>로 짝을 지어요. 괄호 안 순서를 바꾸면 엉뚱한 칸에 들어가요.</p></div></section>
+
+    <section class="step" data-s="8"><div class="card"><h2><span class="n">9</span>찾았으면 화면에 보여 줘요</h2>
+      <p>찾았으니 <code>sy-subrc</code>가 <b>0</b>이에요. <code>IF sy-subrc = 0.</code>을 통과해서 <code>WRITE</code>가 gs_edu의 값을 출력 화면에 찍어요.</p>
+      <p>이렇게 직원은 "모니터 320,000 KRW"를 보게 돼요. 흐름 그림의 마지막 칸까지 왔어요.</p></div></section>
+
+    <section class="step" data-s="9"><div class="card"><h2><span class="n">10</span>없는 번호를 넣으면?</h2>
+      <p>직원이 <code>A009</code>를 넣었다고 해 볼게요. WHERE에서 남는 줄이 없어서 결과가 <b>0건</b>이고, <code>sy-subrc</code>가 <b>4</b>가 돼요.</p>
+      <p>gs_edu는 <b>바뀌지 않고</b>, IF에서 막혀 아무것도 출력되지 않아요. <code>sy-subrc</code> 확인을 빼먹으면, 앞에서 남아 있던 값이 잘못 출력될 수 있어요.</p></div></section>
+
+    <section class="step" data-s="10"><div class="card"><h2><span class="n">11</span>요즘 문법으로 쓰면</h2>
+      <p>하는 일과 실행 순서는 똑같고, 모양만 달라요.</p>
+      <ul><li>필드 사이에 <b>쉼표</b></li><li>변수 앞에 <b>@</b></li><li><code>INTO</code>를 맨 끝에. 순서가 같으면 <code>INTO @gs_edu</code>처럼 Structure 하나로 받을 수 있어요</li></ul>
+      <p>한 문장 안에서 두 모양을 섞으면 문법 오류가 나요. 회사 코드가 어느 쪽인지 보고 맞춰 쓰면 돼요.</p></div></section>
+  </div>
+</div>
+
+<footer>SAP 백엔드 총정리 · 5부 "키로 데이터 읽기: SELECT SINGLE과 복합 키"와 같이 보세요.</footer>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var root=$('root'),code=$('code'),tbl=$('tbl'),flow=$('flow');
+  var pa=$('pa'),v=[$('v1'),$('v2'),$('v3')],rcBox=$('rcbox'),rc=$('rc'),rcs=$('rcs'),out=$('outbox');
+  var res=$('res'),resCells=$('resCells'),resNone=$('resNone');
+  var rows=[].slice.call(tbl.querySelectorAll('tbody tr')),cur=-1,timers=[];
+  var VALS=['모니터','320000','KRW'],COLS=['objtx','price','waers'];
+  function later(fn,ms){timers.push(setTimeout(fn,ms));}
+  function clear(){timers.forEach(clearTimeout);timers=[];[].forEach.call(document.querySelectorAll('.chip'),function(c){c.remove();});}
+  function lines(n){[].forEach.call(code.querySelectorAll('.ln'),function(l){l.classList.toggle('hi',n.indexOf(l.dataset.l)>=0);});code.classList.toggle('dim',n.length>0);}
+  function nodes(on,go){[].forEach.call(flow.children,function(e,i){e.classList.toggle('on',on.indexOf(i)>=0);e.classList.toggle('go',go.indexOf(i)>=0);});}
+  function fill(i,t){v[i].textContent=t;v[i].classList.toggle('filled',!!t);}
+  function setRc(x){rcBox.classList.remove('ok','bad');if(x===null){rc.textContent='-';rcs.textContent='실행 전';return;}rc.textContent=x;rcBox.classList.add(x===0?'ok':'bad');rcs.textContent=x===0?'찾았어요':'못 찾았어요';}
+  function tableState(rowsOn,colsOn,id){
+    tbl.classList.toggle('rows-on',rowsOn);tbl.classList.toggle('cols-on',colsOn);
+    rows.forEach(function(r){r.classList.toggle('keep',r.dataset.id===id);r.classList.toggle('drop',r.dataset.id!==id);});
+    [].forEach.call(tbl.querySelectorAll('[data-c]'),function(c){var p=COLS.indexOf(c.dataset.c)>=0;c.classList.toggle('pick',p);c.classList.toggle('nopick',!p);});
+  }
+  function fly(from,to,text,bg,delay,done){
+    later(function(){
+      var a=from.getBoundingClientRect(),b=to.getBoundingClientRect();
+      var c=document.createElement('div');c.className='chip';c.textContent=text;c.style.background=bg;document.body.appendChild(c);
+      c.style.left=a.left+'px';c.style.top=a.top+'px';
+      requestAnimationFrame(function(){requestAnimationFrame(function(){c.style.transform='translate('+(b.left+6-a.left)+'px,'+(b.top+(b.height-22)/2-a.top)+'px)';});});
+      setTimeout(function(){c.style.opacity='0';done&&done();},900);setTimeout(function(){c.remove();},1250);
+    },delay);
+  }
+  function apply(s){
+    if(s===cur)return;var prev=cur;cur=s;clear();root.dataset.step=s;
+    var bad=(s===9),id=bad?'A009':'A002';
+    root.classList.toggle('mode-new',s===10);
+    pa.textContent=s>=1?id:'';pa.classList.toggle('inp-on',s===1||s===5||s===9);
+    $('selbox').classList.toggle('hi',s===1||s===5||s===9);
+    $('varbox').classList.toggle('hi-g',s===7);
+    tbl.classList.toggle('hi',s===4);
+    code.classList.toggle('show-ord',s>=3&&s<=7||s===10);
+    code.classList.toggle('show-val',s===5);
+    var L={0:[],1:['p','d','s'],2:['sel','from','into','where'],3:['sel','from','into','where'],4:['from'],5:['where'],6:['sel'],7:['into'],8:['if'],9:['where','if'],10:['sel','from','where','into']}[s];
+    lines(L);
+    var N={0:[0,1,2,3,4],1:[0,1],2:[1],3:[1],4:[1,2],5:[2],6:[2],7:[2,3],8:[3,4],9:[1,2],10:[1,2,3]}[s];
+    var G={0:[0,1,2,3],1:[0],4:[1],7:[2],8:[3],10:[1,2]}[s]||[];
+    nodes(N,G);
+    tableState(s>=5&&s<=10,s>=6&&s<=8||s===10,id);
+    if(s===9){tableState(true,false,'NONE');}
+    res.classList.toggle('on',s>=6&&s<=10);
+    resCells.hidden=bad;resNone.hidden=!bad;
+    var filled=(s>=8&&s!==9)||s===10;
+    for(var i=0;i<3;i++)fill(i,filled?VALS[i]:'');
+    if(s===9){for(i=0;i<3;i++)fill(i,'');}
+    setRc(s>=8?(bad?4:0):null);
+    out.classList.toggle('shown',s===8||s===10);out.classList.toggle('hi',s===8);
+    $('outEmpty').style.display=(s===8||s===10)?'none':'';
+    if(s===5&&prev!==5)fly(pa,$('pill'),"'A002'",'#f59e0b',100);
+    if(s===7){
+      for(i=0;i<3;i++)(function(i){fly(resCells.querySelector('[data-r='+COLS[i]+']'),v[i],VALS[i],'#86efac',150+i*380,function(){fill(i,VALS[i]);});})(i);
+    }
+  }
+  var steps=[].slice.call(document.querySelectorAll('.step'));
+  function onScroll(){
+    var mid=innerHeight*(innerWidth<960?0.72:0.55),best=0;
+    steps.forEach(function(st,i){if(st.getBoundingClientRect().top<mid)best=i;});
+    steps.forEach(function(st,i){st.classList.toggle('on',i===best);});
+    apply(+steps[best].dataset.s);
+  }
+  var t=false;addEventListener('scroll',function(){if(!t){t=true;requestAnimationFrame(function(){t=false;onScroll();});}},{passive:true});
+  addEventListener('resize',function(){cur=-1;onScroll();});onScroll();
+})();
+</script>
+</body>
+</html>

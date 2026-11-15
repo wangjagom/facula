@@ -1,0 +1,420 @@
+"""Preview cards for tables, fields, controls and sample data.
+
+Desktop (wide screens): a small card floats next to the word on hover / focus / click.
+Narrow screens (<= 760px): tap opens a bottom sheet.
+The client script finds registered names inside each concept section, marks the first
+mention per block (tables, controls) or per section (fields), and adds a strip of
+"tables used in this section" under the section title.
+"""
+import json
+
+KEY = ('<svg viewBox="0 0 24 24" class="pk-ic" aria-hidden="true"><circle cx="8" cy="15" r="4"/>'
+       '<path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></svg>')
+CHAIN = ('<svg viewBox="0 0 24 24" class="fk-ic" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/>'
+         '<path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>')
+
+# ---------------------------------------------------------------- back-end book
+def T(ko, key, cols, rows, chain=(), note=""):
+    return dict(kind="table", ko=ko, key=key, cols=cols, rows=rows, chain=list(chain), note=note)
+
+
+def F(ko, typ, where):
+    return dict(kind="field", ko=ko, type=typ, where=where)
+
+
+BE = {
+    "ZSTUDENT": T("학생", "MANDT + SID", [("SID", "pk"), ("SNAME", ""), ("CID", "fk"), ("SCORE", "")],
+                  [["0001", "민수", "CL301", "85"], ["0002", "지아", "CL303", "92"], ["0003", "도윤", "CL301", "78"]],
+                  ["ZCLASS", "ZSTUDENT"], "이 교재의 기본 예제예요. CID로 반(ZCLASS)을 가리켜요."),
+    "ZCLASS": T("반", "MANDT + CID", [("CID", "pk"), ("CNAME", "")], [["CL301", "ABAP반"], ["CL303", "UI5반"]],
+                ["ZCLASS", "ZSTUDENT"], "반 이름은 여기에 한 번만 적어요."),
+    "ZENROLL": T("수강 (연결 테이블)", "MANDT + SID + SUBJ", [("SID", "pkfk"), ("SUBJ", "pkfk")],
+                 [["0001", "JS101"], ["0001", "UI5101"], ["0002", "UI5101"]],
+                 ["ZSTUDENT", "ZENROLL", "ZSUBJECT"], "학생과 과목의 다대다를 1:N 두 개로 풀어 주는 테이블이에요."),
+    "ZSUBJECT": T("과목", "MANDT + SUBJ", [("SUBJ", "pk"), ("SUBJNAME", "")], [["JS101", "자바스크립트 기초"], ["UI5101", "SAPUI5 입문"]],
+                  ["ZSUBJECT", "ZENROLL"], ""),
+    "ZCOUNTRY": T("운영 국가", "MANDT + LAND1", [("LAND1", "pkfk")], [["KR"], ["US"], ["JP"]],
+                  ["T005", "ZCOUNTRY"], "T005 안에서 고른 일부 나라만 담은 예제 테이블이에요."),
+    "ZCOUNTRYT": T("운영 국가 이름 (Text Table)", "MANDT + SPRAS + LAND1", [("SPRAS", "pk"), ("LAND1", "pkfk"), ("LANDX", "")],
+                   [["3", "KR", "대한민국"], ["E", "KR", "South Korea"]], ["ZCOUNTRY", "ZCOUNTRYT"], ""),
+    "SCARR": T("항공사", "MANDT + CARRID", [("CARRID", "pk"), ("CARRNAME", ""), ("CURRCODE", "")],
+               [["LH", "Lufthansa", "EUR"], ["AA", "American Airlines", "USD"], ["JL", "Japan Airlines", "JPY"]],
+               ["SCARR", "SPFLI", "SFLIGHT"], "SAP 연습용 항공 모델의 항공사 목록이에요."),
+    "SPFLI": T("운항 노선", "MANDT + CARRID + CONNID", [("CARRID", "pkfk"), ("CONNID", "pk"), ("CITYFROM", ""), ("CITYTO", "")],
+               [["LH", "0400", "FRANKFURT", "NEW YORK"], ["LH", "0402", "FRANKFURT", "NEW YORK"], ["AA", "0017", "NEW YORK", "SAN FRANCISCO"]],
+               ["SCARR", "SPFLI", "SFLIGHT"], "항공사마다 노선 번호(CONNID)를 따로 매겨요."),
+    "SFLIGHT": T("날짜별 운항편", "MANDT + CARRID + CONNID + FLDATE", [("CARRID", "pkfk"), ("CONNID", "pkfk"), ("FLDATE", "pk"), ("PLANETYPE", "fk"), ("PRICE", "")],
+                 [["LH", "0400", "2026-11-20", "A380-800", "666.00"], ["LH", "0400", "2026-11-21", "747-400", "666.00"], ["AA", "0017", "2026-11-20", "747-400", "422.94"]],
+                 ["SCARR", "SPFLI", "SFLIGHT"], "같은 노선이 날짜마다 1건씩 있어요."),
+    "SAPLANE": T("기종", "MANDT + PLANETYPE", [("PLANETYPE", "pk"), ("SEATSMAX", ""), ("PRODUCER", "")],
+                 [["747-400", "385", "BOEING"], ["A380-800", "475", "AIRBUS"]], ["SAPLANE", "SFLIGHT"], "SFLIGHT의 PLANETYPE이 가리키는 기종 정보예요(비식별 관계)."),
+    "T005": T("나라 목록 (SAP 표준)", "MANDT + LAND1", [("LAND1", "pk"), ("(나라별 설정)", "")], [["KR", "…"], ["US", "…"], ["JP", "…"]],
+              [], "나라 이름은 Text Table T005T에 언어별로 있어요."),
+    "T005T": T("나라 이름 (Text Table)", "MANDT + SPRAS + LAND1", [("SPRAS", "pk"), ("LAND1", "pkfk"), ("LANDX", ""), ("NATIO", "")],
+               [["3", "KR", "대한민국", "한국인"], ["E", "KR", "South Korea", "Korean"]], ["T005", "T005T"], ""),
+    "MARA": T("자재 마스터 (SAP 표준)", "MANDT + MATNR", [("MATNR", "pk"), ("MTART", "")], [["100-100", "FERT"]], [],
+              "자재 번호와 기본 정보예요. 이름은 MAKT에 언어별로 있어요."),
+    "MAKT": T("자재 이름 (Text Table)", "MANDT + MATNR + SPRAS", [("MATNR", "pkfk"), ("SPRAS", "pk"), ("MAKTX", "")],
+              [["100-100", "3", "볼트"], ["100-100", "E", "Bolt"]], ["MARA", "MAKT"], ""),
+    "VBAK": T("판매 문서 헤더 (SAP 표준)", "MANDT + VBELN", [("VBELN", "pk"), ("KUNNR", "fk")], [["0000012345", "0000001000"]],
+              ["VBAK", "VBAP"], "문서 1건에 품목(VBAP)이 여러 건 달려요."),
+    "VBAP": T("판매 문서 품목 (SAP 표준)", "MANDT + VBELN + POSNR", [("VBELN", "pkfk"), ("POSNR", "pk"), ("MATNR", "fk")],
+              [["0000012345", "000010", "100-100"], ["0000012345", "000020", "100-200"]], ["VBAK", "VBAP"], ""),
+    "KNA1": T("고객 마스터 (SAP 표준)", "MANDT + KUNNR", [("KUNNR", "pk"), ("NAME1", ""), ("LAND1", "fk")],
+              [["0000001000", "Becker Berlin", "DE"]], [], "LAND1은 Check Table T005로 검사해요."),
+    "MANDT": F("Client 번호", "CLNT 3", [("모든 SAP 테이블", "맨 앞 키 · Check Table T000")]),
+    "SID": F("학번", "NUMC 4", [("ZSTUDENT", "키"), ("ZENROLL", "키 · 외래키 → ZSTUDENT")]),
+    "SNAME": F("학생 이름", "CHAR", [("ZSTUDENT", "일반 필드")]),
+    "CID": F("반 코드", "CHAR 5", [("ZCLASS", "키"), ("ZSTUDENT", "일반 필드 · 외래키 → ZCLASS")]),
+    "CNAME": F("반 이름", "CHAR", [("ZCLASS", "일반 필드")]),
+    "SCORE": F("점수", "INT", [("ZSTUDENT", "일반 필드")]),
+    "SUBJ": F("과목 코드", "CHAR 6", [("ZSUBJECT", "키"), ("ZENROLL", "키 · 외래키 → ZSUBJECT")]),
+    "CARRID": F("항공사 코드", "CHAR 3", [("SCARR", "키"), ("SPFLI", "키 · 외래키 → SCARR"), ("SFLIGHT", "키 · 외래키 → SPFLI")]),
+    "CONNID": F("노선 번호 (항공사 안에서만 유일)", "NUMC 4", [("SPFLI", "키"), ("SFLIGHT", "키 · 외래키 → SPFLI")]),
+    "FLDATE": F("운항 날짜", "DATS 8", [("SFLIGHT", "키")]),
+    "PLANETYPE": F("기종", "CHAR 10", [("SAPLANE", "키"), ("SFLIGHT", "일반 필드 · 외래키 → SAPLANE")]),
+    "NATIO": F("국적", "CHAR 3 (Domain LAND1)", [("강사 테이블", "일반 필드 · 외래키 → T005"), ("T005T", "국적 이름")]),
+    "LAND1": F("나라 코드", "CHAR 3", [("T005", "키"), ("KNA1 등", "일반 필드 · 외래키 → T005")]),
+    "SPRAS": F("언어 키 (3 한국어, E 영어)", "LANG 1", [("Text Table들", "키의 일부")]),
+}
+
+MODELS = {
+    "flight": dict(name="항공 모델", note="SAP 연습용 항공 데이터예요. 항공사 → 노선 → 날짜별 운항편으로 키가 하나씩 늘어나요.",
+                   nodes=[dict(t="SCARR", pos=[0, 0], f=[["CARRID", "pk"]]),
+                          dict(t="SPFLI", pos=[0, 1], f=[["CARRID", "pkfk"], ["CONNID", "pk"]]),
+                          dict(t="SFLIGHT", pos=[0, 2], f=[["CARRID", "pkfk"], ["CONNID", "pkfk"], ["FLDATE", "pk"], ["PLANETYPE", "fk"]]),
+                          dict(t="SAPLANE", pos=[1, 1], f=[["PLANETYPE", "pk"]])],
+                   edges=[dict(a=0, b=1, card="1:N", ident=True, via="CARRID"),
+                          dict(a=1, b=2, card="1:N", ident=True, via="CARRID + CONNID"),
+                          dict(a=3, b=2, card="1:N", ident=False, via="PLANETYPE")]),
+}
+
+# ---------------------------------------------------------------- UI5 book
+def C(lib, desc, items, xml):
+    return dict(kind="ctrl", lib=lib, desc=desc, items=items, xml=xml)
+
+
+UI5 = {
+    "Page": C("sap.m", "화면 한 장. 제목 줄과 내용 영역이 있어요.", [("title", "제목"), ("content", "안에 넣을 컨트롤들 (애그리게이션)")],
+              '<Page title="학생 목록">\n  <content> … </content>\n</Page>'),
+    "Button": C("sap.m", "누르는 버튼.", [("text", "버튼 글자"), ("type", "Emphasized, Reject 등 모양"), ("press", "눌렀을 때 실행할 함수 (이벤트)")],
+                '<Button text="검색" press=".onSearch" />'),
+    "Input": C("sap.m", "글자를 입력받는 칸.", [("value", "입력된 값 (바인딩 가능)"), ("placeholder", "빈칸일 때 흐린 안내 글자"), ("liveChange", "칠 때마다 실행 (이벤트)")],
+               '<Input value="{/name}" placeholder="이름" />'),
+    "Text": C("sap.m", "글자를 보여 주기만 하는 컨트롤.", [("text", "보여 줄 글자")], '<Text text="{/bookInfo/name}" />'),
+    "Label": C("sap.m", "입력칸 앞에 붙는 이름표 글자.", [("text", "글자"), ("labelFor", "어느 입력칸의 이름인지 id")], '<Label text="이름" labelFor="nameInput" />'),
+    "Title": C("sap.m", "굵은 제목 글자.", [("text", "글자"), ("level", "제목 수준 H1~H6")], '<Title text="학생 정보" level="H2" />'),
+    "Panel": C("sap.m", "제목이 있고 접을 수 있는 영역.", [("headerText", "제목"), ("expandable", "접기 가능 여부"), ("content", "안의 컨트롤들")],
+               '<Panel headerText="상세" expandable="true">\n  …\n</Panel>'),
+    "HBox": C("sap.m", "안의 컨트롤을 가로로 나열하는 레이아웃 컨트롤.", [("justifyContent", "가로 정렬 (Start, Center, SpaceBetween)"), ("alignItems", "세로 정렬"), ("items", "안의 컨트롤들")],
+              '<HBox justifyContent="SpaceBetween">\n  <Text text="A" /><Text text="B" />\n</HBox>'),
+    "VBox": C("sap.m", "안의 컨트롤을 세로로 쌓는 레이아웃 컨트롤.", [("justifyContent", "세로 정렬"), ("alignItems", "가로 정렬"), ("items", "안의 컨트롤들")],
+              '<VBox>\n  <Text text="A" /><Text text="B" />\n</VBox>'),
+    "SimpleForm": C("sap.ui.layout.form", "라벨과 입력칸을 짝지어 정렬해 주는 입력 양식.", [("layout", "배치 방식 (ResponsiveGridLayout 등)"), ("content", "Label, Input을 번갈아 넣어요")],
+                    '<f:SimpleForm layout="ResponsiveGridLayout">\n  <Label text="이름" /><Input />\n</f:SimpleForm>'),
+    "Table": C("sap.m", "열과 줄로 데이터를 보여 주는 컨트롤.", [("items", "줄 목록 (애그리게이션 바인딩)"), ("columns", "열 정의"), ("mode", "줄 고르는 방식"), ("selectionChange", "줄을 골랐을 때 (이벤트)")],
+               '<Table items="{/esStdList}">\n  <columns> … </columns>\n  <items> <ColumnListItem> … </ColumnListItem> </items>\n</Table>'),
+    "List": C("sap.m", "한 줄짜리 항목을 세로로 나열하는 목록.", [("items", "항목 목록 (바인딩)"), ("mode", "고르는 방식"), ("selectionChange", "골랐을 때 (이벤트)")],
+              '<List items="{/esStdList}">\n  <StandardListItem title="{Sname}" />\n</List>'),
+    "Select": C("sap.m", "펼쳐서 하나를 고르는 드롭다운.", [("items", "선택지 목록"), ("selectedKey", "고른 항목의 key"), ("change", "바꿨을 때 (이벤트)")],
+                '<Select items="{/classes}">\n  <core:Item key="{Cid}" text="{Cname}" />\n</Select>'),
+    "Dialog": C("sap.m", "화면 위에 뜨는 팝업 창.", [("title", "제목"), ("content", "안의 컨트롤"), ("beginButton / endButton", "아래 버튼")],
+                '<Dialog title="확인">\n  <content> … </content>\n</Dialog>'),
+    "ScrollContainer": C("sap.m", "안의 내용을 스크롤할 수 있게 감싸는 컨트롤.", [("height", "높이"), ("vertical", "세로 스크롤 여부")],
+                         '<ScrollContainer height="300px" vertical="true">\n  …\n</ScrollContainer>'),
+    "MessageToast": C("sap.m (모듈)", "화면 아래에 잠깐 떴다 사라지는 알림. 화면에 놓는 컨트롤이 아니라 코드에서 불러 써요.", [("show(text)", "알림 띄우기")],
+                      'MessageToast.show("저장했어요");'),
+    "JSONModel": C("sap.ui.model.json (모듈)", "자바스크립트 객체를 데이터로 쓰는 모델.", [("setData / getData", "데이터 넣기, 꺼내기"), ("getProperty / setProperty", "경로로 값 읽기, 바꾸기"), ("loadData", "JSON 파일 불러오기")],
+                   'const oModel = new JSONModel(oData);\nthis.getView().setModel(oModel);'),
+    "ODataModel": C("sap.ui.model.odata.v2 (모듈)", "SAP 서버(OData 서비스)와 데이터를 주고받는 모델.", [("read / create / update", "서버 요청")], "new ODataModel('/sap/opu/odata/…')"),
+    "ResourceModel": C("sap.ui.model.resource (모듈)", "i18n 번역 파일의 글자를 쓰는 모델.", [("{i18n>키}", "바인딩으로 글자 가져오기")], '<Text text="{i18n>appTitle}" />'),
+    "esStdList": dict(kind="table", ko="수업 예제 학생 목록 (모델 데이터)", key="배열 · 0번부터",
+                      cols=[("Sid", ""), ("Sname", "")], rows=[["25010001", "민수"], ["25010002", "지아"]], chain=[],
+                      note="모델 데이터의 배열이에요. Binding Path로는 {/esStdList/0/Sname}처럼 적어요."),
+}
+
+
+def assets(registry, scope=".concept", strip_label="이 섹션에서 쓰는 테이블", code_only=False, models=None):
+    data = json.dumps(registry, ensure_ascii=False)
+    mdata = json.dumps(models or {}, ensure_ascii=False)
+    css = """
+<style>
+.pk-ic,.fk-ic{width:13px;height:13px;flex:none;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
+.pk-ic{stroke:#e0a800}.fk-ic{stroke:#4338ca}
+.peek{cursor:help;border-bottom:1.5px dotted rgb(14 165 233 / .65);border-radius:2px;transition:background .15s;outline:none}
+code.peek{border-bottom-color:rgb(14 165 233 / .75)}
+.peek:hover,.peek:focus-visible,.peek.on{background:var(--accent-soft)}
+.peek-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 18px;padding:10px 12px;border-radius:12px;background:#f8fafc;box-shadow:inset 0 0 0 1px var(--line)}
+.peek-strip>span{font-size:12.5px;color:var(--muted);margin-right:2px}
+.peek-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#fff;border:0;box-shadow:inset 0 0 0 1px rgb(3 7 18 / .1);font:600 12.5px var(--font-mono);color:var(--ink);cursor:pointer}
+.peek-chip em{font:400 12px var(--font-body,inherit);font-style:normal;color:var(--muted)}
+.peek-chip:hover,.peek-chip.on{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.peek-pop{position:absolute;z-index:1000;width:min(400px,calc(100vw - 24px));padding:14px 14px 12px;border-radius:14px;background:#fff;box-shadow:0 14px 40px rgb(17 24 39 / .18),0 0 0 1px rgb(3 7 18 / .08);font-size:13px;line-height:1.55;color:var(--ink);opacity:0;transform:translateY(4px);transition:opacity .14s,transform .14s;pointer-events:none}
+.peek-pop.show{opacity:1;transform:none;pointer-events:auto}
+.peek-pop h5{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin:0 0 2px;font:700 15px var(--font-mono)}
+.peek-pop h5 em{font:500 13px var(--font-body,inherit);font-style:normal;color:var(--muted)}
+.peek-pop .pk-line{margin:0 0 8px;font-size:12px;color:var(--muted)}
+.peek-pop .tw{overflow-x:auto;margin:6px -4px 8px;padding:0 4px}
+.peek-pop table{min-width:100%;border-collapse:collapse;font:12px var(--font-mono);margin:0}
+.peek-pop th{text-align:left;font-weight:600;color:#374151;background:#f3f4f6;padding:5px 7px;white-space:nowrap}
+.peek-pop th span{display:inline-flex;align-items:center;gap:3px}
+.peek-pop td{padding:5px 7px;border-top:1px solid rgb(3 7 18 / .06);white-space:nowrap}
+.peek-pop .chain{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0 6px;font:12px var(--font-mono);color:var(--muted)}
+.peek-pop .chain b{color:var(--ink);background:var(--accent-soft);padding:1px 6px;border-radius:6px}
+.peek-pop .note{margin:0;color:#4b5563;font-size:12.5px}
+.peek-pop .where{list-style:none;margin:6px 0 4px;padding:0}
+.peek-pop .where li{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid rgb(3 7 18 / .06);font-size:12.5px}
+.peek-pop .where li b{font:600 12px var(--font-mono);white-space:nowrap}
+.peek-pop .where li span{color:#4b5563;text-align:right}
+.peek-pop pre.px{margin:8px 0 2px;padding:9px 11px;border-radius:9px;background:#0f172a;color:#e2e8f0;font:12px/1.6 var(--font-mono);white-space:pre;overflow-x:auto}
+.peek-pop .go{display:inline-block;margin-top:8px;font-size:12px;color:var(--accent-ink,#0369a1);text-decoration:none}
+.peek-pop.wide{width:min(580px,calc(100vw - 24px))}
+.peek-pop .mh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 8px}
+.peek-pop .mh b{font-size:13.5px}.peek-pop .mh span{font-size:12px;color:var(--muted)}
+.mz{position:relative;margin:0 0 10px;padding:16px 12px 12px;border-radius:12px;background:#f8fafc;box-shadow:inset 0 0 0 1px var(--line)}
+.mz-g{position:relative;display:grid;grid-template-columns:repeat(2,minmax(120px,200px));justify-content:center;column-gap:56px;row-gap:34px;align-items:start;z-index:1}
+.mz svg.mz-w{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.mz-e{position:relative;display:block;width:100%;padding:0;border:0;border-radius:10px;background:#fff;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  box-shadow:0 0 0 1px rgb(3 7 18 / .1),0 1px 2px rgb(3 7 18 / .04);transition:box-shadow .15s}
+.mz-e:hover{box-shadow:0 0 0 1px rgb(14 165 233 / .55),0 2px 6px rgb(3 7 18 / .06)}
+.mz-e.cur{box-shadow:0 0 0 2px var(--accent),0 4px 12px -4px rgb(14 165 233 / .35)}
+.mz-e .hd{display:flex;align-items:baseline;gap:6px;padding:8px 10px 7px;border-bottom:1px solid #eef0f3;min-width:0}
+.mz-e .hd b{font:700 12.5px var(--font-mono)}
+.mz-e .hd i{font-style:normal;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz-e.cur .hd b{color:#0369a1}
+.mz-e .fs{padding:4px 0}.mz-e .fs+.fs{border-top:1px dashed #e5e7eb}
+.mz-f{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;font:500 11.5px var(--font-mono);color:#374151;white-space:nowrap;transition:background .12s}
+.mz-f .ics{display:inline-flex;gap:1px;width:28px;flex:none}
+.mz-f.nk{color:#6b7280}.mz-f.hl{background:#fef3c7;color:#92400e}
+.mz-e .role{position:absolute;top:-9px;right:8px;padding:1px 7px;border-radius:999px;font:600 10.5px/16px var(--font-body,inherit);background:#fff;white-space:nowrap}
+.mz-e .role.p{color:#334155;box-shadow:0 0 0 1px #94a3b8}
+.mz-e .role.c{color:#4338ca;box-shadow:0 0 0 1px #a5b4fc}
+.mz-e .role.me{color:#fff;background:var(--accent);box-shadow:none}
+.mz-w path{fill:none;stroke:#94a3b8;stroke-width:1.5;transition:stroke .12s}
+.mz-w path.nonid{stroke-dasharray:5 4}
+.mz-w g.on path{stroke:#d97706}
+.mz-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 2px 12px;font-size:11px;color:var(--muted);align-items:center}
+.mz-lg span{display:inline-flex;align-items:center;gap:4px}
+.mz-lg svg.ln{width:24px;height:12px;flex:none}
+.mz-lg svg.ln line{stroke:#94a3b8;stroke-width:1.5}
+.mz-rel{list-style:none;margin:10px 0 14px;padding:0;font-size:12.5px}
+.mz-rel li{padding:7px 2px;line-height:1.6;border-top:1px solid rgb(3 7 18 / .06)}
+.mz-rel li b{font:600 12px var(--font-mono)}.mz-rel li em{font-style:normal;color:var(--muted);font-size:11.5px;margin-left:4px}
+.mz-rel li .k{font:600 11px var(--font-mono);color:#92400e}
+.peek-big .mz-g{grid-template-columns:repeat(2,minmax(150px,230px));column-gap:110px}
+.peek-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 6px}
+.peek-tabs button{border:0;padding:3px 9px;border-radius:999px;font:600 11.5px var(--font-mono);background:#f1f5f9;color:#475569;cursor:pointer}
+.peek-tabs button.on{background:var(--ink);color:#fff}
+.peek-pop .sum{margin:4px 0 0;font-size:12px;color:#4b5563}
+.peek-pop .acts{display:flex;justify-content:space-between;gap:10px;margin-top:8px}
+.peek-pop .acts .go,.peek-pop .acts button{margin:0;font-size:12px;color:var(--accent-ink,#0369a1);background:none;border:0;padding:0;cursor:pointer;text-decoration:none}
+.peek-big{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:24px;background:rgb(17 24 39 / .45)}
+.peek-big.show{display:flex}
+.peek-big .in{width:min(980px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:20px 22px;border-radius:18px;background:#fff;box-shadow:0 24px 60px rgb(17 24 39 / .3);font-size:13px}
+.peek-big .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.peek-big .top b{font-size:16px}.peek-big .top button{border:0;background:#f1f5f9;border-radius:999px;width:30px;height:30px;font-size:16px;cursor:pointer}
+.peek-big .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.peek-big .grid section{padding:12px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line)}
+.peek-big .grid h6{margin:0 0 6px;font:700 13px var(--font-mono)}.peek-big .grid h6 em{font:500 12px var(--font-body,inherit);font-style:normal;color:var(--muted);margin-left:6px}
+.peek-big table{border-collapse:collapse;font:12px var(--font-mono);width:100%}
+.peek-big th{text-align:left;background:#f3f4f6;padding:5px 7px;white-space:nowrap}.peek-big th span{display:inline-flex;gap:3px;align-items:center}
+.peek-big td{padding:5px 7px;border-top:1px solid rgb(3 7 18 / .06);white-space:nowrap}
+.peek-big .tw{overflow-x:auto}
+.peek-veil{position:fixed;inset:0;z-index:999;background:rgb(17 24 39 / .32);opacity:0;transition:opacity .16s;pointer-events:none}
+.peek-veil.show{opacity:1;pointer-events:auto}
+@media (max-width:760px){
+ .peek-pop.wide{width:auto}
+ .mz{padding:16px 8px 10px}.mz-g{column-gap:36px;row-gap:38px}
+ .mz-e .hd{padding:7px 8px 6px}.mz-f{padding:0 8px}.mz-f .ics{width:26px}
+ .peek-big{padding:0;align-items:flex-end}
+ .peek-big .in{max-height:92vh;border-radius:18px 18px 0 0}
+ .peek-pop{position:fixed;left:0!important;right:0;top:auto!important;bottom:0;width:auto;max-height:72vh;overflow:auto;border-radius:18px 18px 0 0;padding:10px 18px calc(22px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .22s ease,opacity .1s}
+ .peek-pop.show{transform:none}
+ .peek-pop:before{content:"";display:block;width:38px;height:4px;margin:0 auto 12px;border-radius:2px;background:#d1d5db}
+}
+</style>"""
+    js = r"""
+<script>
+(function(){
+var D=__DATA__, M=__MODELS__, STRIP=__STRIP__, CODE_ONLY=__CODEONLY__;
+var KEY='__KEY__', CHAIN='__CHAIN__';
+var names=Object.keys(D).sort(function(a,b){return b.length-a.length;});
+if(!names.length)return;
+var RE=new RegExp('(^|[^A-Za-z0-9_])('+names.join('|')+')(?![A-Za-z0-9_])','g');
+var SKIP={PRE:1,A:1,BUTTON:1,H1:1,H2:1,H3:1,H4:1,H5:1,SVG:1,SCRIPT:1,STYLE:1,FIGURE:1,LABEL:1,SUMMARY:1,TEXTAREA:1};
+var FIRST={};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function blockOf(n){while(n&&!/^(P|LI|TD|TH|DD|DT|BLOCKQUOTE)$/.test(n.nodeName))n=n.parentNode;return n;}
+function bad(p,scope){for(;p&&p!==scope;p=p.parentNode){if(SKIP[p.nodeName])return true;var c=p.classList;if(c&&(c.contains('quiz')||c.contains('peek')||c.contains('peek-strip')||c.contains('tip')||c.contains('xref')||c.contains('pager')||c.contains('crumb')||c.contains('stepper')))return true;}return false;}
+function hidOf(scope){var h=scope.querySelector('h3[id]');return h?[h.id,(scope.querySelector('.crumb a')||{}).textContent?((scope.querySelector('.crumb a').textContent.split('·')[0]||'').trim()+' · '+(h.getAttribute('data-plain')||h.textContent).split(':')[0]):(h.getAttribute('data-plain')||h.textContent)]:null;}
+document.querySelectorAll('__SCOPE__').forEach(function(scope){
+  var seen=[],fseen={},here=hidOf(scope);
+  var walker=document.createTreeWalker(scope,NodeFilter.SHOW_TEXT,{acceptNode:function(t){
+    if(CODE_ONLY&&!(t.parentNode&&t.parentNode.nodeName==='CODE'))return NodeFilter.FILTER_SKIP;
+    if(bad(t.parentNode,scope))return NodeFilter.FILTER_REJECT;
+    RE.lastIndex=0;return RE.test(t.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP;}});
+  var list=[];while(walker.nextNode())list.push(walker.currentNode);
+  list.forEach(function(t){
+    var blk=blockOf(t)||scope; blk._peek=blk._peek||{};
+    if(CODE_ONLY){
+      var nm=t.nodeValue.trim();if(!D[nm])return;var code=t.parentNode;
+      if(D[nm].kind==='table'&&seen.indexOf(nm)<0)seen.push(nm);
+      if(here&&!FIRST[nm])FIRST[nm]=here;
+      if(blk._peek[nm])return;blk._peek[nm]=1;
+      code.classList.add('peek');code.dataset.peek=nm;code.tabIndex=0;code.setAttribute('role','button');code.setAttribute('aria-label',nm+' 미리보기');return;
+    }
+    var s=t.nodeValue,out=document.createDocumentFragment(),last=0,m;RE.lastIndex=0;
+    while((m=RE.exec(s))){
+      var nm=m[2],st=m.index+m[1].length,e=D[nm];
+      if(e.kind==='table'&&seen.indexOf(nm)<0)seen.push(nm);
+      if(here&&!FIRST[nm])FIRST[nm]=here;
+      if(e.kind==='field'){if(fseen[nm])continue;fseen[nm]=1;}
+      if(blk._peek[nm])continue;blk._peek[nm]=1;
+      out.appendChild(document.createTextNode(s.slice(last,st)));
+      var sp=document.createElement('span');sp.className='peek';sp.textContent=nm;sp.dataset.peek=nm;sp.tabIndex=0;sp.setAttribute('role','button');
+      sp.setAttribute('aria-label',nm+(e.kind==='table'?' 테이블 미리보기':' 설명 보기'));
+      out.appendChild(sp);last=st+nm.length;
+    }
+    if(last){out.appendChild(document.createTextNode(s.slice(last)));t.parentNode.replaceChild(out,t);}
+  });
+  if(STRIP&&seen.length){
+    var strip=document.createElement('div');strip.className='peek-strip';
+    strip.innerHTML='<span>'+STRIP+'</span>'+seen.map(function(n){return '<button type="button" class="peek-chip" data-peek="'+n+'">'+n+'<em>'+esc(D[n].ko)+'</em></button>';}).join('');
+    var head=scope.querySelector('.c-head');if(head)head.insertAdjacentElement('afterend',strip);
+  }
+});
+var pop=document.createElement('div');pop.className='peek-pop';pop.setAttribute('role','dialog');document.body.appendChild(pop);
+var veil=document.createElement('div');veil.className='peek-veil';document.body.appendChild(veil);
+function ic(k){return k==='pk'?KEY:k==='fk'?CHAIN:k==='pkfk'?KEY+CHAIN:'';}
+function modelOf(nm){for(var k in M){var ns=M[k].nodes;for(var i=0;i<ns.length;i++){if(ns[i].t===nm)return k;for(var j=0;j<ns[i].f.length;j++)if(ns[i].f[j][0]===nm)return k;}}return null;}
+function nodeOf(m,t){for(var i=0;i<m.nodes.length;i++)if(m.nodes[i].t===t)return i;return -1;}
+function vias(e){return e.via.split(' + ');}
+function mer(mk,cur,sel,field){
+  var m=M[mk],si=nodeOf(m,sel),h='<div class="mz" data-mz="'+mk+'"><svg class="mz-w" aria-hidden="true"></svg><div class="mz-g">';
+  m.nodes.forEach(function(n,i){
+    var role='';
+    var key=n.f.filter(function(f){return f[1]!=='fk';}),non=n.f.filter(function(f){return f[1]==='fk';});
+    var row=function(f){return '<span class="mz-f'+(f[1]==='fk'?' nk':'')+(f[0]===field?' hl':'')+'" data-f="'+f[0]+'"><span class="ics">'+ic(f[1])+'</span>'+esc(f[0])+'</span>';};
+    h+='<button type="button" class="mz-e'+(i===si?' cur':'')+'" data-tab="'+n.t+'" data-i="'+i+'" style="grid-column:'+(n.pos[0]+1)+';grid-row:'+(n.pos[1]+1)+'">'+role+
+      '<span class="hd"><b>'+n.t+'</b><i>'+esc(D[n.t]?D[n.t].ko:'')+'</i></span><span class="fs" style="display:block">'+key.map(row).join('')+'</span>'+
+      (non.length?'<span class="fs" style="display:block">'+non.map(row).join('')+'</span>':'')+'</button>';
+  });
+  h+='</div></div><div class="mz-lg"><span>'+KEY+'키</span><span>'+CHAIN+'외래키</span>'+
+    '<span><svg class="ln" viewBox="0 0 24 12"><line x1="0" y1="6" x2="24" y2="6"/><line x1="5" y1="1" x2="5" y2="11"/></svg>1개</span>'+
+    '<span><svg class="ln" viewBox="0 0 24 12"><line x1="0" y1="6" x2="24" y2="6"/><line x1="13" y1="6" x2="24" y2="0"/><line x1="13" y1="6" x2="24" y2="12"/></svg>여러 개 (N)</span>'+
+    '<span><svg class="ln" viewBox="0 0 24 12"><line x1="0" y1="6" x2="24" y2="6"/></svg>식별</span>'+
+    '<span><svg class="ln" viewBox="0 0 24 12"><line x1="0" y1="6" x2="24" y2="6" stroke-dasharray="5 4"/></svg>비식별</span></div>';
+  return h;
+}
+function relList(mk){var m=M[mk];return '<ul class="mz-rel">'+m.edges.map(function(e){
+  return '<li><b>'+m.nodes[e.a].t+'</b> → <b>'+m.nodes[e.b].t+'</b> · '+esc(e.card)+' · <span class="k">'+esc(e.via)+'</span>로 이어져요 · '+(e.ident?'식별 (위 테이블의 키가 아래 테이블의 키에 들어가요)':'비식별 (아래 테이블의 일반 필드로 들어가요)')+'</li>';}).join('')+'</ul>';}
+function rowY(box,ent,fs){var ys=fs.map(function(f){var r=ent.querySelector('[data-f="'+f+'"]');if(!r)return null;r=r.getBoundingClientRect();return r.top+r.height/2-box.top;}).filter(function(y){return y!==null;});
+  return ys.reduce(function(a,b){return a+b;},0)/(ys.length||1);}
+function lay(root){
+  (root.querySelectorAll?root.querySelectorAll('.mz'):[]).forEach(function(z){
+    var m=M[z.dataset.mz],svg=z.querySelector('svg.mz-w'),E=z.querySelectorAll('.mz-e');if(!m||!E.length)return;
+    E.forEach(function(b){b.style.marginTop='0px';});
+    var box=z.getBoundingClientRect();if(!box.width)return;
+    m.edges.forEach(function(e){var A=m.nodes[e.a],B=m.nodes[e.b];if(A.pos[1]!==B.pos[1])return;
+      var d=rowY(box,E[e.b],vias(e))-rowY(box,E[e.a],vias(e));
+      if(d>0.5)E[e.a].style.marginTop=d+'px';else if(d<-0.5)E[e.b].style.marginTop=(-d)+'px';});
+    box=z.getBoundingClientRect();var o='';
+    m.edges.forEach(function(e){var A=m.nodes[e.a],B=m.nodes[e.b],ra=E[e.a].getBoundingClientRect(),rb=E[e.b].getBoundingClientRect(),v=vias(e),c=e.ident?'':' class="nonid"',g='<g data-via="'+v.join(' ')+'">';
+      if(A.pos[1]===B.pos[1]){var R=A.pos[0]<B.pos[0],s=R?1:-1,x1=(R?ra.right:ra.left)-box.left,x2=(R?rb.left:rb.right)-box.left,y1=rowY(box,E[e.a],v),y2=rowY(box,E[e.b],v),mx=(x1+x2)/2;
+        g+='<path'+c+' d="M'+x1+' '+y1+'H'+mx+'V'+y2+'H'+x2+'"/><path d="M'+(x1+6*s)+' '+(y1-5)+'V'+(y1+5)+'"/><path d="M'+(x2-10*s)+' '+y2+'L'+x2+' '+(y2-6)+'M'+(x2-10*s)+' '+y2+'L'+x2+' '+(y2+6)+'"/>';}
+      else if(A.pos[0]===B.pos[0]){var D2=A.pos[1]<B.pos[1],t=D2?1:-1,x=(Math.max(ra.left,rb.left)+Math.min(ra.right,rb.right))/2-box.left,ya=(D2?ra.bottom:ra.top)-box.top,yb=(D2?rb.top:rb.bottom)-box.top;
+        g+='<path'+c+' d="M'+x+' '+ya+'V'+yb+'"/><path d="M'+(x-5)+' '+(ya+6*t)+'H'+(x+5)+'"/><path d="M'+x+' '+(yb-10*t)+'L'+(x-6)+' '+yb+'M'+x+' '+(yb-10*t)+'L'+(x+6)+' '+yb+'"/>';}
+      else{var L=B.pos[0]<A.pos[0],s2=L?-1:1,x0=(ra.left+ra.right)/2-box.left,y0=ra.bottom-box.top,y3=rowY(box,E[e.b],v),x3=(L?rb.right:rb.left)-box.left;
+        g+='<path'+c+' d="M'+x0+' '+y0+'V'+y3+'H'+x3+'"/><path d="M'+(x0-5)+' '+(y0+6)+'H'+(x0+5)+'"/><path d="M'+(x3-10*s2)+' '+y3+'L'+x3+' '+(y3-6)+'M'+(x3-10*s2)+' '+y3+'L'+x3+' '+(y3+6)+'"/>';}
+      o+=g+'</g>';});
+    svg.innerHTML=o;
+    var fh=z.querySelector('.mz-f.hl');if(fh)mzHl(z,fh.dataset.f);
+  });
+}
+function mzHl(z,f){z.querySelectorAll('.mz-f').forEach(function(r){r.classList.toggle('hl',!!f&&r.dataset.f===f);});
+  z.querySelectorAll('svg.mz-w g').forEach(function(g){g.classList.toggle('on',!!f&&g.dataset.via.split(' ').indexOf(f)>=0);});}
+function bindHl(root){root.addEventListener('mouseover',function(e){var z=e.target.closest('.mz');if(!z)return;var r=e.target.closest('.mz-f');
+  mzHl(z,r?r.dataset.f:(root===pop?pop.dataset.field||null:null));});}
+function dataTable(t){var e=D[t];if(!e)return '';return '<div class="tw"><table><thead><tr>'+e.cols.map(function(c){return '<th><span>'+ic(c[1])+esc(c[0])+'</span></th>';}).join('')+'</tr></thead><tbody>'+
+  e.rows.map(function(r){return '<tr>'+r.map(function(v){return '<td>'+esc(v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';}
+function renderModel(mk,cur,sel,field,from){
+  var m=M[mk],idx=-1;m.nodes.forEach(function(n,i){if(n.t===sel)idx=i;});
+  var par=m.edges.filter(function(x){return x.b===idx;}).map(function(x){return m.nodes[x.a].t+' ('+x.via+')';});
+  var chi=m.edges.filter(function(x){return x.a===idx;}).map(function(x){return m.nodes[x.b].t;});
+  var h='<div class="mh"><b>'+esc(m.name)+'</b><span>'+m.nodes.length+'개 테이블 · 상자를 누르면 데이터가 바뀌어요</span></div>'+mer(mk,cur,sel,field);
+  if(field&&D[field])h+='<p class="sum" style="margin:0 0 8px"><b style="font-family:var(--font-mono)">'+esc(field)+'</b> '+esc(D[field].ko)+' · '+D[field].where.map(function(w){return esc(w[0]+' '+w[1]);}).join(' / ')+'</p>';
+  h+='<div class="peek-tabs">'+m.nodes.map(function(n){return '<button type="button" data-tab="'+n.t+'" class="'+(n.t===sel?'on':'')+'">'+n.t+'</button>';}).join('')+'</div>';
+  h+=dataTable(sel);
+  h+='<p class="sum">키: '+esc(D[sel]?D[sel].key:'')+(par.length?' · 부모 '+esc(par.join(', ')):'')+(chi.length?' · 자식 '+esc(chi.join(', ')):'')+'. MANDT는 생략했어요.</p>';
+  var f=FIRST[cur||field||sel];
+  h+='<div class="acts">'+(f&&f[0]!==from?'<a class="go" href="#'+f[0]+'">처음 나온 곳: '+esc(f[1])+' →</a>':'<span></span>')+'<button type="button" data-big="'+mk+'">전체 크게 보기 ↗</button></div>';
+  return h;
+}
+function render(nm,from){
+  var mk=modelOf(nm);
+  if(mk){var isT=D[nm]&&D[nm].kind==='table',sel=nm;
+    if(!isT){M[mk].nodes.some(function(n){return n.f.some(function(f){if(f[0]===nm&&/pk/.test(f[1])&&f[1]==='pk'){sel=n.t;return true;}});})||M[mk].nodes.some(function(n){return n.f.some(function(f){if(f[0]===nm){sel=n.t;return true;}});});}
+    pop.classList.add('wide');pop.dataset.model=mk;pop.dataset.cur=isT?nm:'';pop.dataset.field=isT?'':nm;pop.dataset.from=from||'';
+    return renderModel(mk,isT?nm:null,sel,isT?null:nm,from);}
+  pop.classList.remove('wide');
+  var e=D[nm],h='';
+  if(e.kind==='table'){
+    h='<h5>'+esc(nm)+'<em>'+esc(e.ko)+'</em></h5><p class="pk-line">키: '+esc(e.key)+'</p>';
+    if(e.chain&&e.chain.length)h+='<div class="chain">'+e.chain.map(function(c){return c===nm?'<b>'+c+'</b>':c;}).join(' → ')+'</div>';
+    h+='<div class="tw"><table><thead><tr>'+e.cols.map(function(c){return '<th><span>'+ic(c[1])+esc(c[0])+'</span></th>';}).join('')+'</tr></thead><tbody>'+
+      e.rows.map(function(r){return '<tr>'+r.map(function(v){return '<td>'+esc(v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+    var note=e.note||'';if(/^MANDT/.test(e.key))note=(note?note+' ':'')+'MANDT는 생략했어요.';
+    if(note)h+='<p class="note">'+esc(note)+'</p>';
+  }else if(e.kind==='field'){
+    h='<h5>'+esc(nm)+'<em>'+esc(e.ko)+'</em></h5><p class="pk-line">타입 '+esc(e.type)+'</p><ul class="where">'+
+      e.where.map(function(w){return '<li><b>'+esc(w[0])+'</b><span>'+esc(w[1])+'</span></li>';}).join('')+'</ul>';
+  }else{
+    h='<h5>'+esc(nm)+'<em>'+esc(e.lib)+'</em></h5><p class="note">'+esc(e.desc)+'</p><ul class="where">'+
+      e.items.map(function(w){return '<li><b>'+esc(w[0])+'</b><span>'+esc(w[1])+'</span></li>';}).join('')+'</ul><pre class="px">'+esc(e.xml)+'</pre>';
+  }
+  var f=FIRST[nm];
+  if(f&&f[0]!==from)h+='<a class="go" href="#'+f[0]+'">처음 나온 곳: '+esc(f[1])+' →</a>';
+  return h;
+}
+var big=document.createElement('div');big.className='peek-big';big.setAttribute('role','dialog');big.setAttribute('aria-modal','true');document.body.appendChild(big);
+function openBig(mk){var m=M[mk];
+  big.innerHTML='<div class="in"><div class="top"><b>'+esc(m.name)+' 전체 보기</b><button type="button" data-close aria-label="닫기">×</button></div><p class="sum" style="margin:0 0 10px">'+esc(m.note||'')+'</p>'+mer(mk,null,null,null)+relList(mk)+
+    '<div class="grid">'+m.nodes.map(function(n){return '<section><h6>'+n.t+'<em>'+esc(D[n.t]?D[n.t].ko:'')+'</em></h6><p class="sum" style="margin:0 0 6px">키: '+esc(D[n.t]?D[n.t].key:'')+'</p>'+dataTable(n.t)+'</section>';}).join('')+'</div></div>';
+  big.classList.add('show');lay(big);var b=big.querySelector('[data-close]');b&&b.focus();}
+big.addEventListener('click',function(e){if(e.target===big||e.target.closest('[data-close]'))big.classList.remove('show');});
+pop.addEventListener('click',function(e){
+  var t=e.target.closest('[data-tab]');if(t){e.stopPropagation();var mk=pop.dataset.model;pop.innerHTML=renderModel(mk,pop.dataset.cur||null,t.dataset.tab,pop.dataset.field||null,pop.dataset.from);lay(pop);return;}
+  var b=e.target.closest('[data-big]');if(b){e.stopPropagation();var mk2=b.dataset.big;hide();openBig(mk2);}
+});
+var cur=null,hideT=null,narrow=matchMedia('(max-width:760px)');
+function show(el){
+  clearTimeout(hideT);if(cur)cur.classList.remove('on');cur=el;el.classList.add('on');
+  var sc=el.closest('__SCOPE__'),h3=sc&&sc.querySelector('h3[id]');
+  pop.innerHTML=render(el.dataset.peek,h3&&h3.id);lay(pop);
+  if(narrow.matches){veil.classList.add('show');}
+  else{var r=el.getBoundingClientRect(),w=pop.offsetWidth||400,x=Math.min(Math.max(12,r.left+scrollX),scrollX+document.documentElement.clientWidth-w-12);
+    pop.style.left=x+'px';pop.style.top=(r.bottom+scrollY+8)+'px';
+    requestAnimationFrame(function(){var ph=pop.offsetHeight;if(r.bottom+ph+16>innerHeight&&r.top>ph+16)pop.style.top=(r.top+scrollY-ph-8)+'px';});}
+  pop.classList.add('show');requestAnimationFrame(function(){lay(pop);});
+}
+function hide(){pop.classList.remove('show');veil.classList.remove('show');if(cur){cur.classList.remove('on');cur=null;}}
+document.addEventListener('mouseover',function(e){if(narrow.matches)return;var el=e.target.closest('[data-peek]');
+  if(el){if(el!==cur)show(el);else clearTimeout(hideT);}
+  else if(cur&&!e.target.closest('.peek-pop')){clearTimeout(hideT);hideT=setTimeout(hide,200);}
+  else if(e.target.closest('.peek-pop'))clearTimeout(hideT);});
+document.addEventListener('click',function(e){var el=e.target.closest('[data-peek]');
+  if(el){e.preventDefault();if(cur===el&&pop.classList.contains('show')&&narrow.matches)hide();else show(el);return;}
+  if(e.target.closest('.peek-pop .go')){hide();return;}
+  if(!e.target.closest('.peek-pop'))hide();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){hide();big.classList.remove('show');}var el=e.target.closest&&e.target.closest('[data-peek]');if(el&&(e.key==='Enter'||e.key===' ')){e.preventDefault();show(el);}});
+document.addEventListener('focusin',function(e){if(narrow.matches)return;var el=e.target.closest&&e.target.closest('[data-peek]');if(el)show(el);});
+veil.addEventListener('click',hide);bindHl(pop);bindHl(big);addEventListener('resize',function(){lay(pop);lay(big);});
+addEventListener('scroll',function(){if(!narrow.matches&&cur&&!pop.matches(':hover'))hide();},{passive:true});
+addEventListener('hashchange',hide);
+})();
+</script>"""
+    js = (js.replace("__DATA__", data).replace("__MODELS__", mdata).replace("__SCOPE__", scope)
+            .replace("__STRIP__", json.dumps(strip_label, ensure_ascii=False))
+            .replace("__CODEONLY__", "true" if code_only else "false")
+            .replace("__KEY__", KEY).replace("__CHAIN__", CHAIN))
+    return css + js
