@@ -25,7 +25,6 @@ if __name__ == "__main__":
         sys.exit("사용법: python tools/build.py [ui5|backend|all]")
     BOOK = CLI_BOOKS[_arg]
 
-from diagrams import FIGURES
 
 FONT_DIR = ROOT / "fonts"
 _EXT_ERD = ("https://wangjagom.github.io/erd-designer/", ("erd", "teal"), "ERD 설계 도구", "ERD")
@@ -99,7 +98,6 @@ md_src = _fix_bold(md_src)
 lines = md_src.split("\n")
 assert lines[0].startswith("# ")
 body_md = "\n".join(lines[3:])  # drop title + byline (rebuilt in the header)
-body_md = body_md.replace("모델도 바뀜어요", "모델도 바뀌어요")
 
 # diagram placeholders -> markers
 body_md = re.sub(r"^&#91;embedded content:\s*([^\n]*?)\\\]\s*$",
@@ -285,22 +283,9 @@ html_body = "".join(parts)
 html_body = html_body.replace("<table>", '<div class="table-wrap"><table>').replace("</table>", "</table></div>")
 
 # diagrams and interactive demos
-import demos as _demos
-import demos2 as _demos2
-import flowanim as _flowanim
-import se11fk as _se11fk
 import icon3d as _icon3d
-import befigs as _befigs
-import guifigs as _guifigs
-FIGURES = dict(FIGURES); FIGURES.update(_befigs.STATIC)
-for key, (title, fn) in FIGURES.items():
-    fig = (f'<figure class="diagram"><figcaption>{html.escape(title)}</figcaption>'
-           f'<div class="diagram-scroll">{fn()}</div></figure>')
-    html_body = html_body.replace(f"<!--DIAGRAM:{key}-->", fig)
-for key, fn in {"setTimeout 실행 순서": _demos2.settimeout_steps, "정렬 연습장": _demos.flexlab, "경로 찾기 연습장": _demos.pathlab,
-                 "Promise 상태 변화": _demos2.promise_steps, "async await 실행 순서": _demos2.async_steps,
-                 "양방향 바인딩 연습장": _demos2.twolab, "템플릿 복사 연습장": _demos2.tmpllab,
-                 "for 한 바퀴씩": _demos2.for_steps, "필터 정렬 연습장": _demos2.filtlab, "ERD 연습장": _demos2.erdlab, "데이터 왕복 애니메이션": _flowanim.flowanim, "SE11 외래키 따라 하기": _se11fk.se11fk, **_befigs.STEPPERS, **_guifigs.STEPPERS}.items():
+import registry as _registry
+for key, fn in _registry.figures().items():
     html_body = html_body.replace(f"<!--DIAGRAM:{key}-->", fn())
 assert "<!--DIAGRAM:" not in html_body, re.findall(r"<!--DIAGRAM:[^>]*-->", html_body)
 
