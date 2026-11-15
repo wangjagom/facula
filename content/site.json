@@ -14,12 +14,6 @@
       "title": "SAP 백엔드 총정리",
       "desc": "DB 기초부터 SQL, ABAP 데이터까지",
       "tag": "교재"
-    },
-    {
-      "slug": "select-single",
-      "title": "SELECT SINGLE 한 줄씩 따라가기",
-      "desc": "한 줄이 실행되는 과정을 그림으로 따라가 봐요",
-      "tag": "단독 페이지"
     }
   ],
   "links": [

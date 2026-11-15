@@ -16,8 +16,8 @@ facula/
 │   ├─ site.json                  첫 화면의 카드·링크 목록
 │   ├─ sap-backend/doc.md         SAP 백엔드 총정리 (본문)
 │   ├─ sap-backend/book.yaml      교재 설정: 제목, 목차 그룹, 부 아이콘, 외부 링크 (Astro용)
-│   ├─ sap-ui5/doc.md             SAPUI5 총정리 (Astro로는 다음 단계에서 옮겨요)
-│   └─ select-single/index.html   손으로 만든 단독 페이지 (다음 단계)
+│   ├─ sap-ui5/doc.md             SAPUI5 총정리
+│   └─ sap-ui5/book.yaml          교재 설정
 ├─ src/                           Astro
 │   ├─ pages/index.astro          첫 화면
 │   ├─ pages/[book]/index.astro   교재 페이지 (content/<주제>/book.yaml 있는 폴더마다 하나)
