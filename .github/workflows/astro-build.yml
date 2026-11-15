@@ -1,9 +1,9 @@
 name: Astro build check
 
-# astro 브랜치에서 Astro 빌드가 깨지지 않는지만 확인해요. 배포는 하지 않아요(배포는 deploy.yml, main).
+# main 말고 다른 브랜치나 PR에서 Astro 빌드가 깨지지 않는지만 확인해요. 배포는 deploy.yml(main)이 해요.
 on:
   push:
-    branches: [astro]
+    branches-ignore: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

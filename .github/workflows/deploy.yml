@@ -1,5 +1,7 @@
 name: Deploy to GitHub Pages
 
+# main에 push하면 Astro로 빌드해서 GitHub Pages에 배포해요.
+# (파이썬 빌드 tools/build.py는 비교용으로만 남아 있어요)
 on:
   push:
     branches: [main]
@@ -19,16 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - run: python tools/build.py all
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: dist
 
   deploy:
     needs: build

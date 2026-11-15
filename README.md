@@ -4,15 +4,14 @@
 
 주소: https://wangjagom.github.io/facula/
 
-> **옮기는 중**: `astro` 브랜치에서 Astro로 옮기고 있어요. 지금 배포(main)는 파이썬 빌드(`tools/build.py`)예요.
-> 두 빌드는 같은 `content/`와 같은 `src/styles/style.css`, `src/scripts/app.js`를 읽어요.
-> Astro 버전이 기존과 똑같이 보인다고 확인할 때까지 배포 워크플로는 바꾸지 않아요.
+사이트는 Astro로 만들어요. `main`에 push하면 GitHub Actions가 빌드해서 GitHub Pages에 배포해요.
+예전 파이썬 빌드(`tools/build.py`)는 결과를 비교하고 그림 조각을 뽑는 용도로만 남아 있어요.
 
 ## 폴더 구조
 
 ```
 facula/
-├─ content/                       글(원본) — 두 빌드가 함께 읽어요
+├─ content/                       글(원본)
 │   ├─ site.json                  첫 화면의 카드·링크 목록
 │   ├─ sap-backend/doc.md         SAP 백엔드 총정리 (본문)
 │   ├─ sap-backend/book.yaml      교재 설정: 제목, 목차 그룹, 부 아이콘, 외부 링크 (Astro용)
@@ -26,20 +25,20 @@ facula/
 │   ├─ lib/book/                  마크다운 -> 부/개념 구조 (build.py와 같은 규칙)
 │   ├─ plugins/                   remark 플러그인: 전용 코드 블록, 표
 │   ├─ legacy/                    파이썬 그림 모듈이 만든 정적 조각 (tools/export_legacy.py 결과, 커밋해요)
-│   ├─ styles/style.css           교재 스타일 (두 빌드 공용)
-│   └─ scripts/app.js             교재 동작: 페이지 이동, 문제, 문법 탭, 스크롤 애니메이션 (두 빌드 공용)
+│   ├─ styles/style.css           교재 스타일
+│   └─ scripts/app.js             교재 동작: 페이지 이동, 문제, 문법 탭, 스크롤 애니메이션
 ├─ tools/                         파이썬
-│   ├─ build.py                   지금 배포 중인 빌드
+│   ├─ build.py                   예전 빌드 (Astro 결과와 비교할 때만)
 │   ├─ export_legacy.py           그림·아이콘·미리보기 카드를 src/legacy/로 뽑기
 │   ├─ figures/                   그림·애니메이션 모듈 (registry.py가 이름 -> 그림 목록)
 │   └─ _archive/                  빌드에 안 쓰는 옛 실험 파일
 ├─ fonts/                         Pretendard (파이썬 빌드용, OFL)
-└─ .github/workflows/             deploy.yml(main 배포), astro-build.yml(astro 브랜치 빌드 확인)
+└─ .github/workflows/             deploy.yml(main → Pages 배포), astro-build.yml(다른 브랜치 빌드 확인)
 ```
 
 ## 로컬에서 빌드하기
 
-### Astro (astro 브랜치)
+### Astro
 
 Node.js 20 이상이 필요해요. 파이썬은 필요 없어요.
 
@@ -56,7 +55,7 @@ npm run preview    # dist/ 미리보기
 python tools/export_legacy.py
 ```
 
-### 파이썬 (지금 배포 중)
+### 파이썬 (예전 빌드, 비교용)
 
 ```bash
 python -m venv .venv
@@ -66,7 +65,7 @@ python tools/build.py all        # 또는 ui5 / backend
 python -m http.server -d site 8000
 ```
 
-## 새 주제 추가하기 (Astro)
+## 새 주제 추가하기
 
 1. `content/<주제>/doc.md`를 써요. 첫 줄은 `# 제목`, 셋째 줄은 날짜예요(이 3줄은 머리말로 바뀌어요). `##`가 부, `###`가 개념 페이지예요.
 2. `content/<주제>/book.yaml`을 만들어요. `content/sap-backend/book.yaml`을 복사해서 제목·목차 그룹·부 아이콘만 바꾸면 돼요.
