@@ -773,8 +773,8 @@ for w, name in [(400, "Regular"), (600, "SemiBold"), (700, "Bold")]:
     faces.append(f"@font-face{{font-family:'Pretendard';font-weight:{w};font-style:normal;font-display:swap;"
                  f"src:url(data:font/woff;base64,{b64}) format('woff');}}")
 
-css = (TOOLS / "assets" / "style.css").read_text(encoding="utf-8")
-js = (TOOLS / "assets" / "app.js").read_text(encoding="utf-8")
+css = (ROOT / "src" / "styles" / "style.css").read_text(encoding="utf-8")
+js = (ROOT / "src" / "scripts" / "app.js").read_text(encoding="utf-8")
 
 page = f"""<!DOCTYPE html>
 <html lang="ko">

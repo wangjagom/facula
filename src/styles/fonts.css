@@ -1,0 +1,4 @@
+/* Pretendard (SIL OFL 1.1) — 글자 범위별로 잘린 woff2를 필요한 만큼만 받아요. 교재에서 쓰는 굵기 3개만. */
+@import 'pretendard/dist/web/static/Pretendard-Regular.css';
+@import 'pretendard/dist/web/static/Pretendard-SemiBold.css';
+@import 'pretendard/dist/web/static/Pretendard-Bold.css';
