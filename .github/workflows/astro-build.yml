@@ -1,0 +1,29 @@
+name: Astro build check
+
+# astro 브랜치에서 Astro 빌드가 깨지지 않는지만 확인해요. 배포는 하지 않아요(배포는 deploy.yml, main).
+on:
+  push:
+    branches: [astro]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: astro-dist
+          path: dist
+          retention-days: 7

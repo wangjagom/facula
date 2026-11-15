@@ -5,7 +5,7 @@
    https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ko
    전문: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.ko
 
-2. 코드 — tools/ 아래 모든 것 (빌드 스크립트, 그림 생성 모듈, 스타일/스크립트)
+2. 코드 — src/, tools/ 아래 모든 것 (빌드 스크립트, 그림 생성 모듈, 스타일/스크립트)
    MIT License (아래 전문)
 
 3. 글꼴 — fonts/ 아래 Pretendard
@@ -13,7 +13,7 @@
    Copyright (c) 2021 Kil Hyung-jin (Pretendard), 원본 라이선스를 따라요.
 
 --------------------------------------------------------------------------
-MIT License (tools/)
+MIT License (src/, tools/)
 
 Copyright (c) 2026 wangjagom
 

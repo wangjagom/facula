@@ -4,31 +4,59 @@
 
 주소: https://wangjagom.github.io/facula/
 
+> **옮기는 중**: `astro` 브랜치에서 Astro로 옮기고 있어요. 지금 배포(main)는 파이썬 빌드(`tools/build.py`)예요.
+> 두 빌드는 같은 `content/`와 같은 `src/styles/style.css`, `src/scripts/app.js`를 읽어요.
+> Astro 버전이 기존과 똑같이 보인다고 확인할 때까지 배포 워크플로는 바꾸지 않아요.
+
 ## 폴더 구조
 
 ```
 facula/
-├─ content/                 글(원본)
-│   ├─ site.json            첫 화면의 카드·링크 목록
-│   ├─ sap-ui5/doc.md       SAPUI5 총정리
-│   ├─ sap-backend/doc.md   SAP 백엔드 총정리
-│   └─ select-single/index.html   손으로 만든 단독 페이지 (빌드 안 함, 그대로 복사)
-├─ tools/                   빌드 코드
-│   ├─ build.py             빌드 진입점
-│   ├─ index_page.py        첫 화면 생성
-│   ├─ figures/             그림·애니메이션 모듈
-│   ├─ assets/              style.css, app.js
-│   ├─ icon_map2.py 등      아이콘 모듈
-│   ├─ audit.py             모바일 점검 (playwright 필요)
-│   └─ _archive/            빌드에 안 쓰는 옛 실험 파일
-├─ fonts/                   Pretendard (OFL)
-├─ site/                    빌드 결과 (git에 안 올라가요)
-└─ .github/workflows/deploy.yml   main에 push하면 GitHub Pages로 배포
+├─ content/                       글(원본) — 두 빌드가 함께 읽어요
+│   ├─ site.json                  첫 화면의 카드·링크 목록
+│   ├─ sap-backend/doc.md         SAP 백엔드 총정리 (본문)
+│   ├─ sap-backend/book.yaml      교재 설정: 제목, 목차 그룹, 부 아이콘, 외부 링크 (Astro용)
+│   ├─ sap-ui5/doc.md             SAPUI5 총정리 (Astro로는 다음 단계에서 옮겨요)
+│   └─ select-single/index.html   손으로 만든 단독 페이지 (다음 단계)
+├─ src/                           Astro
+│   ├─ pages/index.astro          첫 화면
+│   ├─ pages/[book]/index.astro   교재 페이지 (content/<주제>/book.yaml 있는 폴더마다 하나)
+│   ├─ layouts/BookLayout.astro   교재 틀: 머리말, 목차, 레일, 모바일 서랍, "이 부의 개념"
+│   ├─ content.config.ts          Content Collections (교재 로더)
+│   ├─ lib/book/                  마크다운 -> 부/개념 구조 (build.py와 같은 규칙)
+│   ├─ plugins/                   remark 플러그인: 전용 코드 블록, 표
+│   ├─ legacy/                    파이썬 그림 모듈이 만든 정적 조각 (tools/export_legacy.py 결과, 커밋해요)
+│   ├─ styles/style.css           교재 스타일 (두 빌드 공용)
+│   └─ scripts/app.js             교재 동작: 페이지 이동, 문제, 문법 탭, 스크롤 애니메이션 (두 빌드 공용)
+├─ tools/                         파이썬
+│   ├─ build.py                   지금 배포 중인 빌드
+│   ├─ export_legacy.py           그림·아이콘·미리보기 카드를 src/legacy/로 뽑기
+│   ├─ figures/                   그림·애니메이션 모듈 (registry.py가 이름 -> 그림 목록)
+│   └─ _archive/                  빌드에 안 쓰는 옛 실험 파일
+├─ fonts/                         Pretendard (파이썬 빌드용, OFL)
+└─ .github/workflows/             deploy.yml(main 배포), astro-build.yml(astro 브랜치 빌드 확인)
 ```
 
 ## 로컬에서 빌드하기
 
-Python 3.10 이상이 필요해요.
+### Astro (astro 브랜치)
+
+Node.js 20 이상이 필요해요. 파이썬은 필요 없어요.
+
+```bash
+npm install
+npm run dev        # http://localhost:4321/facula/
+npm run build      # 타입 검사 + dist/ 생성
+npm run preview    # dist/ 미리보기
+```
+
+그림 모듈(`tools/figures/`)이나 아이콘 표(`tools/icon_map2.py`)를 고쳤다면 조각을 다시 뽑아요(파이썬 필요).
+
+```bash
+python tools/export_legacy.py
+```
+
+### 파이썬 (지금 배포 중)
 
 ```bash
 python -m venv .venv
@@ -38,13 +66,31 @@ python tools/build.py all        # 또는 ui5 / backend
 python -m http.server -d site 8000
 ```
 
-`http://localhost:8000/` 에서 확인해요. 모바일 점검(`tools/audit.py`)에는 `pip install playwright`가 따로 필요해요.
+## 새 주제 추가하기 (Astro)
 
-## 새 주제 추가하기
+1. `content/<주제>/doc.md`를 써요. 첫 줄은 `# 제목`, 셋째 줄은 날짜예요(이 3줄은 머리말로 바뀌어요). `##`가 부, `###`가 개념 페이지예요.
+2. `content/<주제>/book.yaml`을 만들어요. `content/sap-backend/book.yaml`을 복사해서 제목·목차 그룹·부 아이콘만 바꾸면 돼요.
+3. `content/site.json`의 `cards`에 한 줄 추가해요.
+4. `npm run dev`로 확인해요. 로그에 `unmapped icons: [...]`가 나오면 그 개념의 아이콘을 `tools/icon_map2.py`의 `CONCEPT`에 추가하고 `python tools/export_legacy.py`를 실행해요.
 
-- **마크다운 교재**: `content/<주제>/doc.md`를 만들고, `tools/build.py`의 `BOOKS`에 교재 설정(제목·부 구성·아이콘)을 추가해요. 첫 화면 카드는 `content/site.json`의 `cards`에 한 줄 추가하면 돼요.
-- **손으로 만든 페이지**: `content/<주제>/index.html`을 두고 `site.json`의 `cards`에만 추가하면 빌드할 때 그대로 `site/<주제>/`로 복사돼요.
-- 교재끼리 링크는 `../sap-ui5/`처럼 사이트 안 상대 경로로 걸어요.
+교재끼리 링크는 `../sap-ui5/`처럼 사이트 안 상대 경로로 걸어요.
+
+## 마크다운 전용 문법
+
+| 쓰는 법 | 결과 |
+|---|---|
+| ` ```abap ` 바로 뒤에 ` ```abap-old ` | 옛/요즘 문법 탭 한 상자 (기본 옛 문법, 선택은 브라우저에 저장) |
+| `<div class="syn-only syn-old">` / `syn-new` | 고른 문법일 때만 보이는 블록 |
+| ` ```quiz ` (`Q:` 질문, `\| ` 코드 줄, `- ` 보기, 끝에 `✓` 정답, `> ` 오답 힌트, 빈 줄로 문제 구분) | 한 문제씩 푸는 문제 카드 |
+| `<details class="more practice">` + `<summary>` | 접힌 문제 묶음 |
+| ` ```syntax ` | 문법 틀 (한글은 채우는 자리) |
+| `&#91;embedded content: 그림 이름 · 설명\]` (한 줄) | 그림 (`src/legacy/figures/index.json`의 이름) |
+| `{? 설명 ?}` | "?" 도움말 |
+| `[0205]`, `[0108~0202, Lev05]` | 수업 날짜 태그 |
+| `- [ ] 할 일` | 체크 목록 |
+| `` `Ctrl + S` `` | 키캡 |
+| 본문의 "3부", "3부 배열 메서드" | 그 부·개념으로 가는 링크 (자동) |
+| `**굵게**로` (닫는 `**` 뒤에 바로 한글) | 굵게 (CommonMark가 못 닫는 경우를 보정) |
 
 ## 교재 작성 규칙
 
@@ -52,17 +98,17 @@ python -m http.server -d site 8000
 - 아직 안 배운 개념을 먼저 쓰지 않아요 (순서 지키기).
 - SAP 고유 개념은 영어 그대로 (Domain, Data Element, Check Table, Structure, Internal Table 등).
 - ABAP 코드는 옛 문법/요즘 문법을 같은 비중의 탭으로, 기본은 옛 문법. ` ```abap ` 바로 다음에 ` ```abap-old `를 붙이면 탭이 돼요. 두 문법이 같으면 탭 없이 한 블록이에요.
-- "SQL은 에스큐엘이라고 읽어요" 같은 뻔한 설명은 넣지 않아요.
+- 뻔한 설명은 넣지 않아요 (예: "SQL은 에스큐엘이라고 읽어요").
 - 그림·애니메이션: 아이콘에 색 배경을 넣지 않고, 스크롤로 진행되는 애니메이션을 선호해요.
 - 새 섹션(`### 제목`)을 만들면 `tools/icon_map2.py`의 `CONCEPT`에 제목의 `:` 앞부분을 키로 아이콘을 추가해요.
-- 문제는 `<details class="more practice">` 안의 ` ```quiz ` 블록에 써요.
+- 문제는 접힌 묶음(`<details class="more practice">`) 안의 ` ```quiz ` 블록에 써요.
 
 ## 라이선스
 
 | 영역 | 라이선스 |
 |---|---|
 | 글 (`content/`) | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ko) |
-| 코드 (`tools/`) | MIT |
-| 글꼴 (`fonts/`) | [Pretendard](https://github.com/orioncactus/pretendard), SIL OFL 1.1 |
+| 코드 (`src/`, `tools/`) | MIT |
+| 글꼴 (`fonts/`, npm `pretendard`) | [Pretendard](https://github.com/orioncactus/pretendard), SIL OFL 1.1 |
 
 자세한 내용은 [LICENSE](LICENSE)를 보세요.
