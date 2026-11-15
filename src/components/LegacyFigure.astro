@@ -1,0 +1,14 @@
+---
+/**
+ * 파이썬 그림 모듈이 만든 그림을 그대로 넣어요(MDX용).
+ *   <LegacyFigure name="ERD 연습장" />
+ * name은 src/legacy/figures/index.json의 이름(= 마크다운 embedded content의 이름)이에요.
+ * .md 교재에서는 `&#91;embedded content: 이름 · 설명\]` 줄이 같은 그림으로 바뀌어요.
+ * 그림 동작(app.js)과 그림용 아이콘(figure-icons.svg)은 교재 틀(BookLayout)이 넣어 줘요.
+ */
+import { legacyFigure } from '../lib/book/legacy';
+
+interface Props { name: string }
+const { name } = Astro.props;
+---
+<Fragment set:html={legacyFigure(name)} />
